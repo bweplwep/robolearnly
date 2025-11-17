@@ -167,6 +167,11 @@ export function PhysicsSimulator({ robotConfig, command, levelId, onSuccess, onF
       Engine.clear(engine);
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (fallTimeoutRef.current) {
+        clearTimeout(fallTimeoutRef.current);
+        fallTimeoutRef.current = null;
       }
       if (runnerRef.current) {
         const { Runner } = Matter;

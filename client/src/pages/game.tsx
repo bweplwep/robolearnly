@@ -1,505 +1,2119 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import { PhysicsSimulator } from "@/components/physics-simulator";
-import { storageService } from "@/lib/storage";
-import { LEVELS, getLevelById } from "@/lib/levels";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    Bot, Target, Trophy, Lightbulb, ChevronRight, CheckCircle, HelpCircle, Play,
+    Square, BookOpen, ArrowRight, Code2, Terminal, Zap, RotateCcw, Calculator,
+    Sparkles, Brain, Book, GraduationCap, TrendingUp, Cpu, CircuitBoard,
+    Microchip, ArrowLeft, Star, Home, Clock, Battery, Navigation, Shield,
+    User, Wifi, Plus, Shapes, Binary, Rocket
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { RobotConfig, ProgramCommand, LevelId, UserProgress, MotorCount, SensorType, MicrocontrollerType } from "@shared/schema";
-import { Bot, Code, Trophy, Lock, CheckCircle, Circle, Download, LogOut } from "lucide-react";
+import ProgrammingBackground from "@/components/ProgrammingBackground";
 
-export default function Game() {
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [progress, setProgress] = useState<UserProgress | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<LevelId>(1);
-  const [robotConfig, setRobotConfig] = useState<RobotConfig>({
-    motors: 2,
-    sensor: "none",
-    microcontroller: "arduino",
-  });
-  const [command, setCommand] = useState<ProgramCommand>({
-    speed: 5,
-    direction: 0,
-    duration: 5000,
-  });
-  const [feedback, setFeedback] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
-  const [isRobotBuilt, setIsRobotBuilt] = useState(false);
+interface CodingTask {
+    id: number;
+    title: string;
+    description: string;
+    category: 'variables' | 'loops' | 'conditions' | 'functions' | 'algorithms';
+    type: 'variables' | 'loops' | 'conditions' | 'functions' | 'algorithms';
+    problem: string;
+    answer: string;
+    explanation: string;
+    hint: string;
+    points: number;
+    completed: boolean;
+    starterCode: string;
+    expectedOutput: string;
 
-  useEffect(() => {
-    const user = storageService.getUser();
-    if (!user) {
-      setLocation("/");
-      return;
-    }
-
-    let userProgress = storageService.getProgress();
-    if (!userProgress) {
-      userProgress = storageService.initializeProgress(user.id);
-    }
-
-    setProgress(userProgress);
-    if (userProgress.robotConfig) {
-      setRobotConfig(userProgress.robotConfig);
-      setIsRobotBuilt(true);
-    }
-    if (userProgress.lastCommand) {
-      setCommand(userProgress.lastCommand);
-    }
-  }, [setLocation]);
-
-  function handleBuildRobot() {
-    storageService.updateRobotConfig(robotConfig);
-    setIsRobotBuilt(true);
-    setFeedback({
-      type: "success",
-      message: `Робот успешно собран! Конфигурация: ${robotConfig.motors} мотор(ов), датчик ${getSensorName(robotConfig.sensor)}, контроллер ${robotConfig.microcontroller.toUpperCase()}.`,
-    });
-    toast({
-      title: "Робот собран!",
-      description: "Теперь можно программировать команды.",
-    });
-  }
-
-  function handleUpdateCommand() {
-    storageService.updateCommand(command);
-    setFeedback({
-      type: "info",
-      message: "Команда обновлена. Нажмите 'Запустить симуляцию' для тестирования.",
-    });
-  }
-
-  function handleSuccess() {
-    if (!progress) return;
-
-    const level = getLevelById(selectedLevel, progress.completedLevels);
-    if (!level.completed) {
-      storageService.completeLevel(selectedLevel, level.pointsReward);
-      const updatedProgress = storageService.getProgress();
-      setProgress(updatedProgress);
-
-      setFeedback({
-        type: "success",
-        message: `🎉 Уровень пройден! Вы получили ${level.pointsReward} баллов!`,
-      });
-
-      toast({
-        title: "Поздравляем!",
-        description: `Вы успешно прошли уровень "${level.title}" и заработали ${level.pointsReward} баллов!`,
-      });
-    }
-  }
-
-  function handleFailure(message: string) {
-    setFeedback({
-      type: "error",
-      message: `❌ ${message}`,
-    });
-  }
-
-  function getSensorName(sensor: SensorType): string {
-    const names = {
-      none: "нет",
-      line: "линия",
-      ultrasonic: "ультразвуковой",
+    funTheory: {
+        title: string;
+        analogy: string;
+        simpleExplanation: string;
+        visualizationTip: string;
+        funFact: string;
     };
-    return names[sensor];
-  }
 
-  function generateArduinoCode(): string {
-    const code = `
-// Автоматически сгенерированный код для Arduino
-// Конфигурация робота
+    extendedTheory: {
+        title: string;
+        definition: string;
+        concepts: string[];
+        realWorldExamples: string[];
+        keyPoints: string[];
+    };
 
-#define MOTOR_COUNT ${robotConfig.motors}
-#define SENSOR_TYPE "${robotConfig.sensor.toUpperCase()}"
-#define CONTROLLER "${robotConfig.microcontroller.toUpperCase()}"
+    academicTheory: {
+        definitions: string[];
+        formulas: string[];
+        principles: string[];
+        textbookExamples: Array<{
+            problem: string;
+            solution: string;
+            steps: string[];
+        }>;
+    };
 
-// Настройки движения
-int speed = ${command.speed};
-int direction = ${command.direction};
-int duration = ${command.duration};
-
-void setup() {
-  Serial.begin(9600);
-  pinMode(9, OUTPUT);  // Мотор 1
-  ${robotConfig.motors === 2 ? 'pinMode(10, OUTPUT); // Мотор 2' : ''}
-  ${robotConfig.sensor !== "none" ? `pinMode(A0, INPUT);  // Датчик ${robotConfig.sensor}` : ''}
+    theoryExample: {
+        problem: string;
+        solution: string[];
+        codeExample: string;
+        explanation: string[];
+        visualization?: {
+            type: 'movement' | 'battery' | 'obstacle' | 'delivery' | 'sensor' | 'patrol';
+            initialPosition: { x: number; y: number };
+            targetPosition?: { x: number; y: number };
+            batteryLevel?: number;
+            obstacles?: { x: number; y: number; width: number; height: number }[];
+            sensorRange?: number;
+            patrolRoute?: { x: number; y: number }[];
+        };
+    };
 }
 
-void loop() {
-  // Основная логика движения
-  analogWrite(9, speed * 25);
-  ${robotConfig.motors === 2 ? 'analogWrite(10, speed * 25);' : ''}
-  
-  ${robotConfig.sensor !== "none" ? `
-  // Чтение датчика
-  int sensorValue = analogRead(A0);
-  if (sensorValue > 500) {
-    // Обнаружено препятствие - корректировка курса
-    analogWrite(9, speed * 15);
-  }` : ''}
-  
-  delay(duration);
-  
-  // Остановка
-  analogWrite(9, 0);
-  ${robotConfig.motors === 2 ? 'analogWrite(10, 0);' : ''}
-  delay(1000);
-}
-`;
-    return code.trim();
-  }
+type ViewMode = 'textbook' | 'theory' | 'practice';
+type CodingCategory = 'all' | 'variables' | 'loops' | 'conditions' | 'functions' | 'algorithms';
 
-  function handleExportCode() {
-    const code = generateArduinoCode();
-    navigator.clipboard.writeText(code);
-    toast({
-      title: "Код скопирован!",
-      description: "Arduino-код скопирован в буфер обмена.",
-    });
-  }
+export default function CodingTasks() {
+    const [, setLocation] = useLocation();
+    const { toast } = useToast();
+    const [currentTask, setCurrentTask] = useState(1);
+    const [userCode, setUserCode] = useState("");
+    const [tasks, setTasks] = useState<CodingTask[]>([]);
+    const [showExplanation, setShowExplanation] = useState(false);
+    const [viewMode, setViewMode] = useState<ViewMode>('textbook');
+    const [selectedCategory, setSelectedCategory] = useState<CodingCategory>('all');
+    const [output, setOutput] = useState<string[]>([]);
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [animationProgress, setAnimationProgress] = useState(0);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [showFunTheory, setShowFunTheory] = useState(true);
+    const [showConfetti, setShowConfetti] = useState(false);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const animationRef = useRef<number>();
 
-  function handleLogout() {
-    storageService.clearUser();
-    setLocation("/");
-  }
+    const stopAnimation = useCallback(() => {
+        if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = undefined;
+        }
+        setIsAnimating(false);
+    }, []);
 
-  if (!progress) {
-    return <div className="flex items-center justify-center min-h-screen">Загрузка...</div>;
-  }
+    const startAnimation = useCallback(() => {
+        setIsAnimating(true);
+        const animate = () => {
+            setAnimationProgress(prev => {
+                const newProgress = prev + 1;
+                if (newProgress >= 100) {
+                    setIsAnimating(false);
+                    return 100;
+                }
+                animationRef.current = requestAnimationFrame(animate);
+                return newProgress;
+            });
+        };
+        animationRef.current = requestAnimationFrame(animate);
+    }, []);
 
-  const levels = [1, 2, 3].map(id => getLevelById(id as LevelId, progress.completedLevels));
+    const resetAnimation = useCallback(() => {
+        stopAnimation();
+        setAnimationProgress(0);
+    }, [stopAnimation]);
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                <Bot className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <h1 className="text-xl font-bold">РобоКвест</h1>
-            </div>
+    useEffect(() => {
+        return () => {
+            stopAnimation();
+        };
+    }, [stopAnimation]);
 
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                {levels.map(level => (
-                  <div
-                    key={level.id}
-                    className="flex flex-col items-center gap-1"
-                    data-testid={`badge-level-${level.id}`}
-                  >
-                    <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${
-                      level.completed 
-                        ? "bg-chart-2 border-chart-2 text-white" 
-                        : level.unlocked
-                        ? "bg-primary border-primary text-primary-foreground"
-                        : "bg-muted border-muted-foreground/30 text-muted-foreground"
-                    }`}>
-                      {level.completed ? (
-                        <CheckCircle className="w-5 h-5" />
-                      ) : level.unlocked ? (
-                        <Circle className="w-5 h-5" />
-                      ) : (
-                        <Lock className="w-4 h-4" />
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground">{level.id}</span>
-                  </div>
-                ))}
-              </div>
+    const goToProfile = () => {
+        setLocation("/profile");
+    };
 
-              <Separator orientation="vertical" className="h-8" />
+    const codingSections = [
+        {
+            id: 'variables',
+            title: '🔢 Переменные',
+            description: 'Хранение данных и базовые операции',
+            icon: Shapes,
+            color: 'from-blue-500 to-cyan-500',
+            totalTasks: 5,
+            completedTasks: 0,
+            totalPoints: 125
+        },
+        {
+            id: 'loops',
+            title: '🔄 Циклы',
+            description: 'Повторение действий и накопление',
+            icon: Binary,
+            color: 'from-green-500 to-emerald-500',
+            totalTasks: 5,
+            completedTasks: 0,
+            totalPoints: 150
+        },
+        {
+            id: 'conditions',
+            title: '🎯 Условия',
+            description: 'Принятие решений и ветвление',
+            icon: Cpu,
+            color: 'from-purple-500 to-pink-500',
+            totalTasks: 5,
+            completedTasks: 0,
+            totalPoints: 175
+        },
+        {
+            id: 'functions',
+            title: '🔧 Функции',
+            description: 'Модульность и переиспользование кода',
+            icon: CircuitBoard,
+            color: 'from-orange-500 to-yellow-500',
+            totalTasks: 5,
+            completedTasks: 0,
+            totalPoints: 200
+        },
+        {
+            id: 'algorithms',
+            title: '🚀 Алгоритмы',
+            description: 'Сложная логика и анализ данных',
+            icon: Rocket,
+            color: 'from-red-500 to-rose-500',
+            totalTasks: 5,
+            completedTasks: 0,
+            totalPoints: 225
+        }
+    ];
 
-              <div className="flex items-center gap-2 bg-chart-3/10 px-4 py-2 rounded-lg">
-                <Trophy className="w-5 h-5 text-chart-3" />
-                <span className="text-lg font-semibold" data-testid="text-points">
-                  {progress.points}
-                </span>
-              </div>
+    const funCodingTheory = [
+        {
+            icon: Code2,
+            title: "Программирование - это как обучение робота!",
+            description: "Представь, что робот - это ученик, а программа - это учебник. Чем точнее инструкции, тем лучше робот выполняет задачи!",
+            color: "from-purple-500/20 to-pink-500/20",
+            examples: [
+                "🤖 Робот-пылесос объезжает мебель благодаря программе",
+                "🚗 Беспилотный автомобиль соблюдает правила дорожного движения",
+                "🏭 Промышленный робот точно собирает детали по инструкции",
+                "🍳 Робот-шеф готовит блюда по запрограммированному рецепту"
+            ]
+        },
+        {
+            icon: Brain,
+            title: "Почему это важно для будущего?",
+            description: "Программирование роботов создает автономные системы, которые работают 24/7, выполняют опасные задачи и помогают людям!",
+            color: "from-blue-500/20 to-cyan-500/20",
+            examples: [
+                "🔬 Роботы исследуют Марс и океанские глубины",
+                "🏥 Роботы-хирурги проводят точные операции с микронной точностью",
+                "🚀 Роботы строят космические станции в вакууме",
+                "🌱 Роботы автономно ухаживают за тысячами растений"
+            ]
+        },
+        {
+            icon: Sparkles,
+            title: "Пять ключей к робототехнике",
+            description: "Освоив эти пять концепций, ты сможешь запрограммировать любого робота для решения реальных задач!",
+            color: "from-green-500/20 to-emerald-500/20",
+            points: [
+                { emoji: "🔋", text: "Переменные - память робота (батарея, скорость, координаты)" },
+                { emoji: "🔄", text: "Циклы - повторение действий (патрулирование, сканирование)" },
+                { emoji: "🎯", text: "Условия - принятие решений (зарядка, объезд препятствий)" },
+                { emoji: "🔧", text: "Функции - готовые команды (расчет времени, анализ данных)" },
+                { emoji: "🚀", text: "Алгоритмы - сложные последовательности (навигация, оптимизация)" }
+            ]
+        }
+    ];
 
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleLogout}
-                data-testid="button-logout"
-              >
-                <LogOut className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    useEffect(() => {
+        const codingTasks: CodingTask[] = [
+            {
+                id: 1,
+                title: "Расчет времени зарядки робота",
+                description: "Базовые операции и переменные",
+                category: 'variables',
+                type: 'variables',
+                problem: `Робот имеет батарею емкостью 5000 мАч. 
+Зарядное устройство выдает ток 2000 мА.
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="w-5 h-5" />
-                  Конструктор робота
-                </CardTitle>
-                <CardDescription>Соберите робота из доступных компонентов</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="motors">Количество моторов</Label>
-                  <Select
-                    value={String(robotConfig.motors)}
-                    onValueChange={(value) => setRobotConfig({ ...robotConfig, motors: Number(value) as MotorCount })}
-                    disabled={isRobotBuilt}
-                  >
-                    <SelectTrigger id="motors" data-testid="select-motors">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 мотор</SelectItem>
-                      <SelectItem value="2">2 мотора</SelectItem>
-                    </SelectContent>
-                  </Select>
+Напишите программу, которая вычисляет время полной зарядки робота в часах.
+
+Формула: время_зарядки = емкость_батареи / ток_зарядки
+
+Программа должна вывести результат вычисления.`,
+                answer: "2.5",
+                explanation: `Объяснение решения:
+
+1. Задаем параметры батареи:
+   capacity = 5000  (емкость в мАч)
+   charge_current = 2000  (ток зарядки в мА)
+
+2. Вычисляем время зарядки:
+   charge_time = capacity / charge_current
+   charge_time = 5000 / 2000 = 2.5 часа
+
+Правильный код:
+\`\`\`
+capacity = 5000
+charge_current = 2000
+charge_time = capacity / charge_current
+print(charge_time)
+\`\`\``,
+                hint: "Используйте деление для вычисления времени зарядки",
+                points: 15,
+                completed: false,
+                starterCode: `# Расчет времени зарядки робота
+# Емкость батареи: 5000 мАч, ток зарядки: 2000 мА
+
+# Ваш код ниже:`,
+                expectedOutput: "2.5",
+
+                funTheory: {
+                    title: "Переменные - это как коробки с данными!",
+                    analogy: "Представь, что переменные - это ящики в памяти робота. В один ящик положили 'емкость батареи', в другой - 'ток зарядки'. Программа достает данные из ящиков и вычисляет результат!",
+                    simpleExplanation: "Переменные хранят данные, которые можно использовать в вычислениях. Например, 'capacity' хранит 5000, 'charge_current' хранит 2000.",
+                    visualizationTip: "Посмотри на анимацию: робот заряжается, а программа вычисляет, сколько это займет времени!",
+                    funFact: "🔋 Самый большой аккумулятор в мире (в Калифорнии) может питать 300,000 домов в течение часа!"
+                },
+
+                extendedTheory: {
+                    title: "Переменные и базовые операции",
+                    definition: "Переменная - именованная область памяти для хранения данных. Базовые операции: присваивание, арифметические вычисления.",
+                    concepts: [
+                        "Переменная создается при первом присваивании значения",
+                        "Имена переменных должны быть понятными (capacity, current, time)",
+                        "Арифметические операции: + (сложение), - (вычитание), * (умножение), / (деление)",
+                        "Типы данных: целые числа (5000), вещественные числа (2.5)",
+                        "Оператор print() выводит результат"
+                    ],
+                    realWorldExamples: [
+                        "💰 Расчет стоимости товаров в магазине",
+                        "⏱️ Измерение времени выполнения задач",
+                        "📏 Вычисление расстояний и скоростей",
+                        "🌡️ Обработка данных с датчиков"
+                    ],
+                    keyPoints: [
+                        "Переменные хранят данные для повторного использования",
+                        "Имена должны быть осмысленными",
+                        "Арифметические операции выполняются слева направо",
+                        "Важно проверять единицы измерения",
+                        "Результат должен быть понятным для пользователя"
+                    ]
+                },
+
+                academicTheory: {
+                    definitions: [
+                        "Переменная - именованная область памяти компьютера, предназначенная для хранения данных.",
+                        "Тип данных - характеристика переменной, определяющая какие значения она может хранить и какие операции с ней можно выполнять.",
+                        "Оператор присваивания (=) сохраняет значение в переменной.",
+                        "Арифметические операции: сложение (+), вычитание (-), умножение (*), деление (/)."
+                    ],
+                    formulas: [
+                        "Время зарядки = Емкость батареи / Ток зарядки",
+                        "Расстояние = Скорость × Время",
+                        "Стоимость = Цена × Количество"
+                    ],
+                    principles: [
+                        "Каждая переменная имеет уникальное имя",
+                        "Значение переменной можно изменять в ходе выполнения программы",
+                        "Перед использованием переменной ей должно быть присвоено значение",
+                        "Операции выполняются в соответствии с математическими правилами приоритета"
+                    ],
+                    textbookExamples: [
+                        {
+                            problem: "Робот проехал 150 метров со скоростью 3 м/с. Вычислите время движения.",
+                            solution: "50 секунд",
+                            steps: [
+                                "Задайте переменные: distance = 150, speed = 3",
+                                "Примените формулу: time = distance / speed",
+                                "Вычислите: time = 150 / 3 = 50 секунд"
+                            ]
+                        },
+                        {
+                            problem: "Батарея емкостью 3000 мАч заряжается током 1000 мА. Найдите время зарядки.",
+                            solution: "3 часа",
+                            steps: [
+                                "Задайте переменные: capacity = 3000, current = 1000",
+                                "Примените формулу: time = capacity / current",
+                                "Вычислите: time = 3000 / 1000 = 3 часа"
+                            ]
+                        }
+                    ]
+                },
+
+                theoryExample: {
+                    problem: "Робот с батареей 3000 мАч заряжается от устройства с током 1500 мА. Сколько времени займет зарядка?",
+                    solution: [
+                        "🔋 Шаг 1: Задаем параметры",
+                        "capacity = 3000  # емкость батареи",
+                        "current = 1500   # ток зарядки",
+                        "",
+                        "⏱️ Шаг 2: Вычисляем время",
+                        "time = capacity / current",
+                        "time = 3000 / 1500 = 2.0 часа",
+                        "",
+                        "📊 Шаг 3: Проверяем расчет",
+                        "1500 мА * 2 часа = 3000 мАч ✓",
+                        "",
+                        "📤 Результат:",
+                        "2.0"
+                    ],
+                    codeExample: `# ПРОГРАММА ДЛЯ РАСЧЕТА ЗАРЯДКИ РОБОТА
+# Расчет времени зарядки батареи
+
+# Параметры батареи и зарядки
+battery_capacity = 3000  # мАч
+charge_current = 1500    # мА
+
+# Вычисляем время зарядки
+charge_time = battery_capacity / charge_current
+
+# Выводим результат
+print("Время зарядки:", charge_time, "часов")
+print("Робот будет готов через", charge_time * 60, "минут")`,
+                    explanation: [
+                        "💡 Единицы измерения:",
+                        "мАч (миллиампер-час) - емкость батареи",
+                        "мА (миллиампер) - сила тока",
+                        "Часы - время зарядки",
+                        "",
+                        "🔋 Формула зарядки:",
+                        "Время = Емкость / Ток",
+                        "5000 мАч / 2000 мА = 2.5 часа",
+                        "Для быстрой зарядки нужен больший ток",
+                        "",
+                        "🤖 Для робота:",
+                        "Знание времени зарядки помогает планировать работу",
+                        "Автоматическое оповещение о готовности",
+                        "Оптимизация расписания зарядки"
+                    ],
+                    visualization: {
+                        type: 'battery',
+                        initialPosition: { x: 200, y: 200 },
+                        batteryLevel: 25
+                    }
+                }
+            },
+            {
+                id: 2,
+                title: "Маршрут патрулирования",
+                description: "Циклы и накопление расстояния",
+                category: 'loops',
+                type: 'loops',
+                problem: `Робот-охранник патрулирует территорию, проезжая 5 кругов. 
+Каждый круг имеет длину 120 метров.
+
+Напишите программу, которая вычисляет общее расстояние патрулирования.
+
+Программа должна вывести полученную сумму.`,
+                answer: "600",
+                explanation: `Объяснение решения:
+
+1. Задаем параметры маршрута:
+   laps = 5  (количество кругов)
+   lap_distance = 120  (длина одного круга в метрах)
+
+2. Вычисляем общее расстояние:
+   total_distance = laps * lap_distance
+   total_distance = 5 * 120 = 600 метров
+
+Правильный код:
+\`\`\`
+laps = 5
+lap_distance = 120
+total_distance = laps * lap_distance
+print(total_distance)
+\`\`\``,
+                hint: "Используйте умножение для вычисления общего расстояния",
+                points: 20,
+                completed: false,
+                starterCode: `# Расчет общего расстояния патрулирования
+# Количество кругов: 5, длина круга: 120 метров
+
+# Ваш код ниже:`,
+                expectedOutput: "600",
+
+                funTheory: {
+                    title: "Циклы - это как карусель!",
+                    analogy: "Представь карусель, которая делает 5 кругов. Цикл в программировании - это команда 'повтори 5 раз', а каждый круг - одно выполнение команды!",
+                    simpleExplanation: "Циклы позволяют повторять одни и те же действия многократно. Вместо того чтобы писать одну и ту же команду 5 раз, мы говорим 'повтори это 5 раз'.",
+                    visualizationTip: "Посмотри на анимацию: робот едет по кругу снова и снова, считая каждый круг!",
+                    funFact: "🔄 Некоторые промышленные роботы выполняют одни и те же движения миллионы раз без ошибок!"
+                },
+
+                extendedTheory: {
+                    title: "Циклы и итерации",
+                    definition: "Цикл - управляющая конструкция, позволяющая многократно выполнять блок команд. Итерация - одно выполнение тела цикла.",
+                    concepts: [
+                        "Циклы экономят код: один блок вместо многих повторений",
+                        "Счетчик цикла отслеживает количество выполненных итераций",
+                        "Циклы могут быть конечными (заданное число повторений) или бесконечными",
+                        "Вложенные циклы - циклы внутри циклов",
+                        "Важно избегать бесконечных циклов в автономных системах"
+                    ],
+                    realWorldExamples: [
+                        "📡 Сканирование территории по заданному маршруту",
+                        "🏭 Повторение производственных операций",
+                        "🔍 Поиск объектов в заданной области",
+                        "📊 Обработка массивов данных"
+                    ],
+                    keyPoints: [
+                        "Циклы автоматизируют повторяющиеся задачи",
+                        "Счетчик определяет количество повторений",
+                        "Тело цикла - команды для повторения",
+                        "Важно задавать условие выхода из цикла",
+                        "Циклы - основа автоматизации в робототехнике"
+                    ]
+                },
+
+                academicTheory: {
+                    definitions: [
+                        "Цикл - управляющая конструкция языка программирования, позволяющая выполнять набор команд многократно.",
+                        "Итерация - однократное выполнение тела цикла.",
+                        "Счетчик цикла - переменная, которая хранит текущий номер итерации.",
+                        "Тело цикла - блок команд, который повторяется на каждой итерации."
+                    ],
+                    formulas: [
+                        "Общее расстояние = Количество повторений × Расстояние за одно повторение",
+                        "Сумма = Первый элемент + Шаг × (Количество элементов - 1)",
+                        "Общее время = Время одной операции × Количество операций"
+                    ],
+                    principles: [
+                        "Цикл должен иметь условие завершения",
+                        "Счетчик цикла должен изменяться внутри тела цикла",
+                        "Бесконечные циклы могут привести к зависанию программы",
+                        "Циклы могут быть вложенными друг в друга"
+                    ],
+                    textbookExamples: [
+                        {
+                            problem: "Робот должен сделать 8 измерений температуры с интервалом 10 секунд. Сколько всего времени займет процесс?",
+                            solution: "70 секунд",
+                            steps: [
+                                "Количество измерений: 8",
+                                "Интервал между измерениями: 10 секунд",
+                                "Время = (8-1) × 10 = 70 секунд",
+                                "Первый замер происходит сразу, остальные через интервалы"
+                            ]
+                        },
+                        {
+                            problem: "Конвейерная лента перемещает 25 деталей. На обработку каждой детали требуется 3 секунды. Вычислите общее время.",
+                            solution: "75 секунд",
+                            steps: [
+                                "Количество деталей: 25",
+                                "Время на деталь: 3 секунды",
+                                "Общее время = 25 × 3 = 75 секунд"
+                            ]
+                        }
+                    ]
+                },
+
+                theoryExample: {
+                    problem: "Робот-уборщик делает 8 проходов по коридору длиной 15 метров. Какое общее расстояние он проезжает?",
+                    solution: [
+                        "🔄 Шаг 1: Задаем параметры",
+                        "passes = 8        # количество проходов",
+                        "corridor_length = 15  # длина коридора",
+                        "",
+                        "📏 Шаг 2: Вычисляем расстояние",
+                        "total = passes * corridor_length",
+                        "total = 8 * 15 = 120 метров",
+                        "",
+                        "🔋 Шаг 3: Оцениваем расход энергии",
+                        "При расходе 10 м/Ач: 120 / 10 = 12 Ач",
+                        "",
+                        "📤 Результат:",
+                        "120"
+                    ],
+                    codeExample: `# ПРОГРАММА ДЛЯ РОБОТА-ПАТРУЛЬНОГО
+# Расчет маршрута патрулирования
+
+# Параметры маршрута
+number_of_laps = 8
+lap_distance = 15  # метров
+
+# Вычисляем общее расстояние
+total_distance = number_of_laps * lap_distance
+
+# Дополнительные расчеты
+battery_consumption = 0.1  # Ач на метр
+total_consumption = total_distance * battery_consumption
+
+# Выводим результаты
+print("Общее расстояние:", total_distance, "метров")
+print("Расход батареи:", total_consumption, "Ач")
+print("Остаток заряда после патруля:", 100 - total_consumption, "%")`,
+                    explanation: [
+                        "💡 Планирование маршрута:",
+                        "Знание общего расстояния помогает оценить заряд батареи",
+                        "Оптимизация количества кругов",
+                        "Автоматический возврат на зарядку",
+                        "",
+                        "🔄 Циклы в робототехнике:",
+                        "Патрулирование по круговому маршруту",
+                        "Многократное выполнение одинаковых действий",
+                        "Сканирование территории",
+                        "",
+                        "📊 Расчет энергии:",
+                        "Расход = Расстояние × Потребление на метр",
+                        "Контроль остатка заряда",
+                        "Автоматическая подзарядка"
+                    ],
+                    visualization: {
+                        type: 'patrol',
+                        initialPosition: { x: 200, y: 200 },
+                        patrolRoute: [
+                            { x: 100, y: 100 },
+                            { x: 300, y: 100 },
+                            { x: 300, y: 300 },
+                            { x: 100, y: 300 },
+                            { x: 100, y: 100 }
+                        ]
+                    }
+                }
+            },
+            {
+                id: 3,
+                title: "Проверка уровня заряда",
+                description: "Условные операторы для управления роботом",
+                category: 'conditions',
+                type: 'conditions',
+                problem: `Робот проверяет уровень заряда своей батареи.
+
+Напишите программу, которая:
+- Если заряд больше 30%, выводит "Продолжаем работу"
+- Если заряд от 10% до 30%, выводит "Поиск зарядной станции"  
+- Если заряд меньше 10%, выводит "СРОЧНАЯ ЗАРЯДКА!"
+
+Текущий заряд батареи: 25%
+
+Программа должна вывести соответствующее сообщение.`,
+                answer: "Поиск зарядной станции",
+                explanation: `Объяснение решения:
+
+1. Задаем уровень заряда:
+   battery_level = 25
+
+2. Проверяем условия:
+   battery_level > 30? НЕТ
+   battery_level >= 10? ДА (25 >= 10) → "Поиск зарядной станции"
+
+Правильный код:
+\`\`\`
+battery_level = 25
+if battery_level > 30:
+    print("Продолжаем работу")
+elif battery_level >= 10:
+    print("Поиск зарядной станции")
+else:
+    print("СРОЧНАЯ ЗАРЯДКА!")
+\`\`\``,
+                hint: "Используйте конструкцию if-elif-else для проверки диапазонов заряда",
+                points: 25,
+                completed: false,
+                starterCode: `# Проверка уровня заряда батареи
+# Текущий заряд: 25%
+
+battery_level = 25
+# Ваш код ниже:`,
+                expectedOutput: "Поиск зарядной станции",
+
+                funTheory: {
+                    title: "Условия - это как светофор для робота!",
+                    analogy: "Представь, что робот подъезжает к перекрестку. Если горит зеленый - едет, желтый - готовится остановиться, красный - останавливается. Условные операторы работают так же!",
+                    simpleExplanation: "Условные операторы позволяют роботу принимать решения. 'Если' заряд высокий - работаем, 'иначе если' заряд средний - ищем зарядку, 'иначе' - срочно заряжаемся.",
+                    visualizationTip: "Посмотри на анимацию: робот проверяет заряд и решает, что делать дальше!",
+                    funFact: "🚦 Современные беспилотные автомобили принимают до 1000 решений в секунду на основе условий!"
+                },
+
+                extendedTheory: {
+                    title: "Условные операторы и принятие решений",
+                    definition: "Условные операторы позволяют программе выполнять различные действия в зависимости от условий. Основные конструкции: if, elif, else.",
+                    concepts: [
+                        "if проверяет первое условие",
+                        "elif (else if) проверяет дополнительные условия, если предыдущие ложны",
+                        "else выполняется, если все условия ложны",
+                        "Условия могут быть сложными (комбинации с and, or, not)",
+                        "Вложенные условия - условия внутри условий"
+                    ],
+                    realWorldExamples: [
+                        "🚨 Системы безопасности: если обнаружено движение - включить тревогу",
+                        "🌡️ Климат-контроль: если температура выше 25°C - включить кондиционер",
+                        "🔋 Управление питанием: если заряд ниже 20% - перейти в энергосберегающий режим",
+                        "🚗 Автопилот: если препятствие ближе 5 метров - экстренное торможение"
+                    ],
+                    keyPoints: [
+                        "Условия позволяют создавать интеллектуальное поведение",
+                        "Порядок условий важен: проверяются сверху вниз",
+                        "Сложные условия делают программу умнее",
+                        "Важно покрывать все возможные случаи",
+                        "Условия - основа автономного принятия решений"
+                    ]
+                },
+
+                academicTheory: {
+                    definitions: [
+                        "Условный оператор - конструкция языка программирования, позволяющая выполнять различные блоки команд в зависимости от истинности условий.",
+                        "Булево выражение - выражение, которое может принимать значения True (истина) или False (ложь).",
+                        "Логические операторы: AND (и), OR (или), NOT (не) - используются для комбинирования условий.",
+                        "Оператор ветвления - общее название для конструкций if, elif, else."
+                    ],
+                    formulas: [
+                        "Логическое И: A AND B = истина, только если оба A и B истинны",
+                        "Логическое ИЛИ: A OR B = истина, если хотя бы один из A или B истинен",
+                        "Логическое НЕ: NOT A = истина, если A ложно"
+                    ],
+                    principles: [
+                        "Условия проверяются последовательно сверху вниз",
+                        "При первом истинном условии выполняется соответствующий блок и остальные условия не проверяются",
+                        "Блок else выполняется только если все условия ложны",
+                        "Вложенные условия позволяют создавать сложные логические деревья"
+                    ],
+                    textbookExamples: [
+                        {
+                            problem: "Напишите программу, которая определяет категорию температуры: ниже 0°C - холодно, 0-20°C - нормально, выше 20°C - тепло.",
+                            solution: "Использовать конструкцию if-elif-else",
+                            steps: [
+                                "Задать переменную temperature",
+                                "if temperature < 0: print('холодно')",
+                                "elif temperature <= 20: print('нормально')",
+                                "else: print('тепло')"
+                            ]
+                        },
+                        {
+                            problem: "Программа для светофора: если горит красный - 'стой', желтый - 'внимание', зеленый - 'иди'.",
+                            solution: "Использовать switch-case или if-elif-else",
+                            steps: [
+                                "Задать переменную light_color",
+                                "if light_color == 'красный': print('стой')",
+                                "elif light_color == 'желтый': print('внимание')",
+                                "elif light_color == 'зеленый': print('иди')",
+                                "else: print('ошибка')"
+                            ]
+                        }
+                    ]
+                },
+
+                theoryExample: {
+                    problem: "Робот обнаружил препятствие на расстоянии 0.8 метра. Какое действие он должен выполнить?",
+                    solution: [
+                        "🎯 Шаг 1: Задаем расстояние",
+                        "distance = 0.8  # метров до препятствия",
+                        "",
+                        "🔍 Шаг 2: Проверяем условия",
+                        "if distance < 0.5:",
+                        '    print("ЭКСТРЕННАЯ ОСТАНОВКА!")',
+                        "elif distance < 1.0:",
+                        '    print("Снизить скорость")',
+                        "else:",
+                        '    print("Продолжать движение")',
+                        "",
+                        "🚨 Шаг 3: Анализируем ситуацию",
+                        "0.8 < 1.0 → ДА → 'Снизить скорость'",
+                        "",
+                        "📤 Результат:",
+                        "Снизить скорость"
+                    ],
+                    codeExample: `# СИСТЕМА БЕЗОПАСНОСТИ РОБОТА
+# Управление в зависимости от уровня заряда и препятствий
+
+# Текущее состояние робота
+battery_level = 25  # процентов
+obstacle_distance = 0.8  # метров
+
+print("=== СИСТЕМНЫЙ МОНИТОРИНГ ===")
+
+# Проверка уровня заряда
+if battery_level > 30:
+    print("🔋 Статус: Продолжаем работу")
+elif battery_level >= 10:
+    print("🔋 Статус: Поиск зарядной станции")
+    print("⚡ Рекомендация: Начать возврат на базу")
+else:
+    print("🔋 Статус: СРОЧНАЯ ЗАРЯДКА!")
+    print("🚨 Действие: Немедленно остановиться")
+
+# Проверка препятствий
+if obstacle_distance < 0.5:
+    print("🚨 Препятствие: ЭКСТРЕННАЯ ОСТАНОВКА!")
+elif obstacle_distance < 1.0:
+    print("⚠️ Препятствие: Снизить скорость до 50%")
+else:
+    print("✅ Препятствие: Путь свободен")`,
+                    explanation: [
+                        "💡 Система принятия решений:",
+                        "Робот должен самостоятельно оценивать ситуацию",
+                        "Приоритет безопасности над задачами",
+                        "Автоматическое реагирование на угрозы",
+                        "",
+                        "🔋 Управление энергией:",
+                        "Критический уровень - немедленная остановка",
+                        "Низкий уровень - поиск зарядки",
+                        "Нормальный уровень - продолжение работы",
+                        "",
+                        "🚨 Безопасность движения:",
+                        "Близкие препятствия - экстренная остановка",
+                        "Средняя дистанция - снижение скорости",
+                        "Большая дистанция - нормальное движение"
+                    ],
+                    visualization: {
+                        type: 'sensor',
+                        initialPosition: { x: 200, y: 200 },
+                        sensorRange: 120
+                    }
+                }
+            },
+            {
+                id: 4,
+                title: "Функция расчета времени доставки",
+                description: "Создание и использование функций",
+                category: 'functions',
+                type: 'functions',
+                problem: `Напишите функцию calculate_delivery_time(distance, speed), 
+которая вычисляет время доставки груза роботом-курьером.
+
+Затем используйте эту функцию для вычисления:
+- время доставки на distance=800 метров при speed=2 м/с
+- время доставки на distance=1200 метров при speed=1.5 м/с
+
+Выведите оба результата в секундах.`,
+                answer: "400.0\n800.0",
+                explanation: `Объяснение решения:
+
+1. Создаем функцию:
+   def calculate_delivery_time(distance, speed):
+   return distance / speed  # формула времени
+
+2. Используем функцию:
+   result1 = calculate_delivery_time(800, 2) → 400.0
+   result2 = calculate_delivery_time(1200, 1.5) → 800.0
+
+Правильный код:
+\`\`\`
+def calculate_delivery_time(distance, speed):
+    return distance / speed
+
+print(calculate_delivery_time(800, 2))
+print(calculate_delivery_time(1200, 1.5))
+\`\`\``,
+                hint: "Время вычисляется по формуле: время = расстояние / скорость",
+                points: 30,
+                completed: false,
+                starterCode: `# Создайте функцию для расчета времени доставки
+# Затем вычислите время для двух маршрутов
+
+# Ваш код ниже:`,
+                expectedOutput: "400.0\n800.0",
+
+                funTheory: {
+                    title: "Функции - это как кулинарные рецепты!",
+                    analogy: "Представь, что функция - это рецепт пиццы. Один раз записал рецепт (создал функцию), а потом можешь готовить пиццу с разными начинками (вызывать функцию с разными параметрами)!",
+                    simpleExplanation: "Функции - это готовые команды, которые можно использовать многократно. Создал функцию 'расчитать_время', и теперь можешь рассчитывать время для любых расстояний и скоростей.",
+                    visualizationTip: "Посмотри на анимацию: робот-курьер использует функцию расчета времени для разных маршрутов!",
+                    funFact: "🔧 В операционной системе Android более 15 миллионов строк кода, организованных в тысячи функций!"
+                },
+
+                extendedTheory: {
+                    title: "Функции и модульность",
+                    definition: "Функция - именованный блок кода, который выполняет определенную задачу и может быть вызван из других частей программы. Параметры - входные данные функции.",
+                    concepts: [
+                        "Функции создаются с помощью ключевого слова def",
+                        "Параметры определяются в скобках после имени функции",
+                        "return возвращает результат работы функции",
+                        "Функции можно вызывать многократно с разными параметрами",
+                        "Модульные программы легче читать, тестировать и исправлять"
+                    ],
+                    realWorldExamples: [
+                        "📦 calculate_delivery_time() - расчет времени доставки",
+                        "🔋 check_battery() - проверка состояния батареи",
+                        "🗺️ find_route() - поиск оптимального маршрута",
+                        "🎯 avoid_obstacle() - алгоритм объезда препятствий"
+                    ],
+                    keyPoints: [
+                        "Функции делают код reusable (многократно используемым)",
+                        "Каждая функция должна выполнять одну четкую задачу",
+                        "Параметры делают функции гибкими",
+                        "Возвращаемые значения передают результат",
+                        "Хорошие функции имеют понятные имена"
+                    ]
+                },
+
+                academicTheory: {
+                    definitions: [
+                        "Функция - подпрограмма, имеющая уникальное имя, которая может принимать параметры и возвращать результат.",
+                        "Параметр функции - переменная, которая передается в функцию при ее вызове.",
+                        "Аргумент - конкретное значение, передаваемое в функцию при вызове.",
+                        "Возвращаемое значение - результат работы функции, который передается обратно в вызывающий код."
+                    ],
+                    formulas: [
+                        "Синтаксис функции: def имя_функции(параметры):",
+                        "Вызов функции: имя_функции(аргументы)",
+                        "Возврат значения: return выражение"
+                    ],
+                    principles: [
+                        "Функция должна выполнять одну четко определенную задачу",
+                        "Имя функции должно отражать ее назначение",
+                        "Функция может принимать любое количество параметров",
+                        "Функция может возвращать только одно значение (но это может быть коллекция)",
+                        "Функции повышают читаемость и переиспользуемость кода"
+                    ],
+                    textbookExamples: [
+                        {
+                            problem: "Создайте функцию для расчета площади прямоугольника. Функция должна принимать ширину и высоту.",
+                            solution: "def rectangle_area(width, height): return width * height",
+                            steps: [
+                                "Определить функцию с двумя параметрами",
+                                "В теле функции умножить параметры",
+                                "Вернуть результат с помощью return"
+                            ]
+                        },
+                        {
+                            problem: "Создайте функцию для конвертации градусов Цельсия в Фаренгейты.",
+                            solution: "def celsius_to_fahrenheit(c): return c * 9/5 + 32",
+                            steps: [
+                                "Определить функцию с одним параметром",
+                                "Применить формулу конвертации",
+                                "Вернуть результат"
+                            ]
+                        }
+                    ]
+                },
+
+                theoryExample: {
+                    problem: "Создайте функцию для расчета расхода батареи робота-курьера.",
+                    solution: [
+                        "🔧 Шаг 1: Создаем функцию",
+                        "def calculate_battery_usage(distance, consumption_rate):",
+                        "    usage = distance * consumption_rate",
+                        "    return usage",
+                        "",
+                        "📞 Шаг 2: Используем функцию",
+                        "result1 = calculate_battery_usage(800, 0.05)",
+                        "result2 = calculate_battery_usage(1200, 0.05)",
+                        "print(result1)",
+                        "print(result2)",
+                        "",
+                        "🔋 Шаг 3: Проверяем вычисления",
+                        "800 * 0.05 = 40.0 Ач",
+                        "1200 * 0.05 = 60.0 Ач",
+                        "",
+                        "📤 Результат:",
+                        "40.0",
+                        "60.0"
+                    ],
+                    codeExample: `# БИБЛИОТЕКА ФУНКЦИЙ ДЛЯ РОБОТА-КУРЬЕРА
+# Различные расчеты для автономной работы
+
+# Функция расчета времени доставки
+def calculate_delivery_time(distance, speed):
+    time_seconds = distance / speed
+    return time_seconds
+
+# Функция расчета расхода батареи
+def calculate_battery_usage(distance, consumption_rate):
+    usage = distance * consumption_rate
+    return usage
+
+# Функция проверки возможности доставки
+def can_deliver(distance, battery_level, consumption_rate):
+    needed_battery = distance * consumption_rate
+    return battery_level >= needed_battery
+
+# Используем наши функции
+print("=== СИСТЕМА ПЛАНИРОВАНИЯ ДОСТАВКИ ===")
+
+# Расчет времени
+time1 = calculate_delivery_time(800, 2)
+time2 = calculate_delivery_time(1200, 1.5)
+print(f"Время доставки 800м: {time1} сек ({time1/60:.1f} мин)")
+print(f"Время доставки 1200м: {time2} сек ({time2/60:.1f} мин)")
+
+# Проверка возможности доставки
+battery = 50  # Ач
+consumption = 0.05  # Ач на метр
+can_deliver_800 = can_deliver(800, battery, consumption)
+print(f"Можно доставить 800м: {can_deliver_800}")`,
+                    explanation: [
+                        "💡 Функции в робототехнике:",
+                        "calculate_delivery_time() - планирование маршрута",
+                        "calculate_battery_usage() - управление энергией",
+                        "can_deliver() - проверка feasibility",
+                        "",
+                        "🎯 Автономное принятие решений:",
+                        "Робот сам оценивает возможность выполнения задачи",
+                        "Учет времени, расстояния и энергии",
+                        "Автоматический отказ от невозможных заданий",
+                        "",
+                        "📊 Оптимизация доставки:",
+                        "Выбор оптимальной скорости",
+                        "Расчет точного времени прибытия",
+                        "Контроль расхода батареи"
+                    ],
+                    visualization: {
+                        type: 'delivery',
+                        initialPosition: { x: 100, y: 300 },
+                        targetPosition: { x: 300, y: 100 },
+                    }
+                }
+            },
+            {
+                id: 5,
+                title: "Анализ данных сенсоров",
+                description: "Обработка показаний датчиков",
+                category: 'algorithms',
+                type: 'algorithms',
+                problem: `Робот получает данные с датчиков расстояния. Ваша задача проанализировать эти данные.
+
+Дан список измерений: [1.2, 0.8, 2.1, 0.3, 1.8, 0.5, 2.4]
+
+Напишите программу, которая:
+1. Считает количество опасных ситуаций (расстояние меньше 0.5 метра)
+2. Вычисляет среднее безопасное расстояние (только значения >= 0.5)
+
+Программа должна вывести два результата в формате:
+Опасные ситуации: [число]
+Среднее расстояние: [число]`,
+                answer: "Опасные ситуации: 2\nСреднее расстояние: 1.6",
+                explanation: `Объяснение решения:
+
+1. Инициализируем переменные:
+   danger_count = 0  (для подсчета опасных ситуаций)
+   safe_sum = 0  (для суммы безопасных расстояний)
+   safe_count = 0  (для количества безопасных измерений)
+
+2. Перебираем измерения в цикле:
+   Если расстояние < 0.5: увеличиваем danger_count
+   Если расстояние >= 0.5: добавляем к safe_sum, увеличиваем safe_count
+
+3. Вычисляем среднее:
+   average_safe = safe_sum / safe_count
+
+Правильный код:
+\`\`\`
+measurements = [1.2, 0.8, 2.1, 0.3, 1.8, 0.5, 2.4]
+danger_count = 0
+safe_sum = 0
+safe_count = 0
+
+for dist in measurements:
+    if dist < 0.5:
+        danger_count += 1
+    else:
+        safe_sum += dist
+        safe_count += 1
+
+average_safe = safe_sum / safe_count
+print("Опасные ситуации:", danger_count)
+print("Среднее расстояние:", average_safe)
+\`\`\``,
+                hint: "Используйте цикл for для перебора списка и условные операторы для классификации измерений",
+                points: 35,
+                completed: false,
+                starterCode: `# Анализ данных с датчиков расстояния
+# Найдите опасные ситуации и среднее безопасное расстояние
+
+measurements = [1.2, 0.8, 2.1, 0.3, 1.8, 0.5, 2.4]
+# Ваш код ниже:`,
+                expectedOutput: "Опасные ситуации: 2\nСреднее расстояние: 1.6",
+
+                funTheory: {
+                    title: "Алгоритмы - это как кулинарный рецепт для робота!",
+                    analogy: "Представь, что алгоритм - это рецепт сложного блюда. Шаг 1: собрать ингредиенты (данные), шаг 2: обработать (анализ), шаг 3: получить результат (решение)!",
+                    simpleExplanation: "Алгоритмы - это пошаговые инструкции для решения сложных задач. В нашем случае: собрать данные с датчиков, проанализировать их, найти опасные ситуации и вычислить среднее.",
+                    visualizationTip: "Посмотри на анимацию: робот анализирует данные с датчиков и строит карту безопасных зон!",
+                    funFact: "🧠 Google обрабатывает более 3.5 миллиардов поисковых запросов в день с помощью сложных алгоритмов!"
+                },
+
+                extendedTheory: {
+                    title: "Алгоритмы и обработка данных",
+                    definition: "Алгоритм - конечная последовательность четко определенных действий для решения задачи. Обработка данных - преобразование входных данных в полезную информацию.",
+                    concepts: [
+                        "Алгоритмы состоят из последовательных шагов",
+                        "Циклы обрабатывают коллекции данных (списки, массивы)",
+                        "Условия фильтруют и классифицируют данные",
+                        "Агрегация: суммирование, усреднение, подсчет",
+                        "Сложные алгоритмы могут включать машинное обучение"
+                    ],
+                    realWorldExamples: [
+                        "📡 Анализ данных с датчиков для навигации",
+                        "🔍 Распознавание объектов на изображениями",
+                        "🗣️ Обработка голосовых команд",
+                        "📊 Прогнозирование износа деталей робота"
+                    ],
+                    keyPoints: [
+                        "Алгоритмы должны быть корректными (решать задачу)",
+                        "Эффективность алгоритма важна для real-time систем",
+                        "Модульность: разбиение сложных алгоритмов на части",
+                        "Тестирование на различных наборах данных",
+                        "Документация алгоритмов для понимания логики"
+                    ]
+                },
+
+                academicTheory: {
+                    definitions: [
+                        "Алгоритм - точная конечная последовательность действий, направленная на решение конкретной задачи.",
+                        "Сложность алгоритма - оценка количества ресурсов (времени, памяти), необходимых для его выполнения.",
+                        "Линейный алгоритм - алгоритм, в котором все операции выполняются последовательно.",
+                        "Циклический алгоритм - алгоритм, содержащий повторяющиеся действия."
+                    ],
+                    formulas: [
+                        "Среднее арифметическое = Сумма элементов / Количество элементов",
+                        "Процент = (Часть / Целое) × 100%",
+                        "Сумма элементов = Первый элемент + Последний элемент / 2 × Количество элементов (для арифметической прогрессии)"
+                    ],
+                    principles: [
+                        "Алгоритм должен иметь начало и конец",
+                        "Каждый шаг алгоритма должен быть четко определен",
+                        "Алгоритм должен быть применим к разным входным данным",
+                        "Эффективность алгоритма оценивается по времени выполнения и используемой памяти"
+                    ],
+                    textbookExamples: [
+                        {
+                            problem: "Дан список температур. Найдите максимальную и минимальную температуру.",
+                            solution: "Использовать алгоритм поиска максимума и минимума в списке",
+                            steps: [
+                                "Инициализировать max_temp и min_temp первым элементом списка",
+                                "Пройти по всем элементам списка в цикле",
+                                "Если текущий элемент > max_temp, обновить max_temp",
+                                "Если текущий элемент < min_temp, обновить min_temp"
+                            ]
+                        },
+                        {
+                            problem: "Дан список оценок студентов. Вычислите средний балл и количество отличных оценок (>= 4.5).",
+                            solution: "Использовать алгоритм суммирования и подсчета с условием",
+                            steps: [
+                                "Инициализировать sum = 0, count = 0, excellent_count = 0",
+                                "Пройти по всем оценкам в цикле",
+                                "Добавить оценку к sum, увеличить count на 1",
+                                "Если оценка >= 4.5, увеличить excellent_count на 1",
+                                "Вычислить среднее: average = sum / count"
+                            ]
+                        }
+                    ]
+                },
+
+                theoryExample: {
+                    problem: "Проанализируйте данные с датчика температуры процессора робота: [45, 52, 48, 65, 47, 70, 49]. Найдите перегревы (>60°) и среднюю температуру.",
+                    solution: [
+                        "🔧 Шаг 1: Инициализируем переменные",
+                        "temperatures = [45, 52, 48, 65, 47, 70, 49]",
+                        "overheat_count = 0",
+                        "total_temp = 0",
+                        "",
+                        "🔄 Шаг 2: Перебираем данные в цикле",
+                        "for temp in temperatures:",
+                        "    if temp > 60:",
+                        "        overheat_count += 1",
+                        "    total_temp += temp",
+                        "",
+                        "📊 Шаг 3: Вычисляем среднюю температуру",
+                        "average_temp = total_temp / len(temperatures)",
+                        "",
+                        "🌡️ Шаг 4: Анализируем результаты",
+                        "Перегревы: 65° и 70° → 2 ситуации",
+                        "Средняя: (45+52+48+65+47+70+49)/7 = 53.7°",
+                        "",
+                        "📤 Результат:",
+                        "Перегревы: 2",
+                        "Средняя температура: 53.7"
+                    ],
+                    codeExample: `# СИСТЕМА МОНИТОРИНГА РОБОТА
+# Анализ данных с различных датчиков
+
+# Данные с датчиков
+distance_measurements = [1.2, 0.8, 2.1, 0.3, 1.8, 0.5, 2.4]
+temperature_readings = [45, 52, 48, 65, 47, 70, 49]
+battery_levels = [80, 78, 75, 72, 70, 68, 65]
+
+print("=== ОТЧЕТ СИСТЕМЫ МОНИТОРИНГА ===")
+
+# Анализ расстояний
+danger_count = 0
+safe_distances = []
+for dist in distance_measurements:
+    if dist < 0.5:
+        danger_count += 1
+    else:
+        safe_distances.append(dist)
+
+average_safe = sum(safe_distances) / len(safe_distances) if safe_distances else 0
+
+# Анализ температуры
+overheats = [temp for temp in temperature_readings if temp > 60]
+average_temp = sum(temperature_readings) / len(temperature_readings)
+
+# Анализ батареи
+battery_drop = battery_levels[0] - battery_levels[-1]
+average_consumption = battery_drop / len(battery_levels)
+
+# Вывод результатов
+print(f"📏 Безопасность: {danger_count} опасных ситуаций")
+print(f"📏 Среднее безопасное расстояние: {average_safe:.1f} м")
+print(f"🌡️ Перегревы процессора: {len(overheats)} раз")
+print(f"🌡️ Средняя температура: {average_temp:.1f}°C")
+print(f"🔋 Падение заряда: {battery_drop}%")
+print(f"🔋 Средний расход: {average_consumption:.1f}%/измерение")
+
+# Рекомендации
+if danger_count > 2:
+    print("🚨 РЕКОМЕНДАЦИЯ: Проверить датчики препятствий")
+if len(overheats) > 0:
+    print("🚨 РЕКОМЕНДАЦИЯ: Увеличить охлаждение")
+if battery_drop > 20:
+    print("🚨 РЕКОМЕНДАЦИЯ: Оптимизировать энергопотребление")`,
+                    explanation: [
+                        "💡 Системный мониторинг:",
+                        "Анализ данных с multiple датчиков",
+                        "Выявление паттернов и аномалий",
+                        "Автоматические рекомендации",
+                        "",
+                        "🎯 Проактивное обслуживание:",
+                        "Предупреждение проблем до их возникновения",
+                        "Оптимизация работы систем",
+                        "Увеличение срока службы робота",
+                        "",
+                        "📊 Анализ тенденций:",
+                        "Снижение заряда батареи",
+                        "Частота опасных ситуаций",
+                        "Температурные режимы работы",
+                        "",
+                        "🤖 Автономная диагностика:",
+                        "Робот сам оценивает свое состояние",
+                        "Рекомендации по обслуживанию",
+                        "Предсказание отказов"
+                    ]
+                }
+            }
+        ];
+        setTasks(codingTasks);
+    }, []);
+
+    const currentTaskData = tasks.find(task => task.id === currentTask);
+    const filteredTasks = selectedCategory === 'all'
+        ? tasks
+        : tasks.filter(task => task.category === selectedCategory);
+    const sectionTasks = tasks.filter(task => task.category === selectedCategory && selectedCategory !== 'all');
+    const completedSectionTasks = sectionTasks.filter(task => task.completed).length;
+    const sectionPoints = sectionTasks.filter(task => task.completed).reduce((sum, task) => sum + task.points, 0);
+
+    const completedTasks = tasks.filter(task => task.completed).length;
+    const totalPoints = tasks.filter(task => task.completed).reduce((sum, task) => sum + task.points, 0);
+
+    useEffect(() => {
+        if (currentTaskData) {
+            setUserCode(currentTaskData.starterCode);
+            setOutput([]);
+            setAnimationProgress(0);
+            stopAnimation();
+        }
+    }, [currentTaskData, stopAnimation]);
+
+    const simulateCodeExecution = (code: string, taskId: number): string => {
+        const normalizedCode = code.toLowerCase().replace(/\s+/g, ' ');
+
+        switch (taskId) {
+            case 1:
+                if ((normalizedCode.includes('print') &&
+                    (normalizedCode.includes('2.5') || normalizedCode.includes('2.5'))) ||
+                    (normalizedCode.includes('5000') && normalizedCode.includes('2000') &&
+                        (normalizedCode.includes('/') || normalizedCode.includes('делит'))) ||
+                    (normalizedCode.includes('charge_time') || normalizedCode.includes('time') ||
+                        normalizedCode.includes('время')) &&
+                    (normalizedCode.includes('2.5') || normalizedCode.includes('2.5'))) {
+                    return "2.5";
+                }
+                return "Ошибка: программа не вычисляет правильное время зарядки";
+
+            case 2:
+                if ((normalizedCode.includes('print') &&
+                    (normalizedCode.includes('600') || normalizedCode.includes('600'))) ||
+                    (normalizedCode.includes('5') && normalizedCode.includes('120') &&
+                        (normalizedCode.includes('*') || normalizedCode.includes('умнож') || normalizedCode.includes('×'))) ||
+                    (normalizedCode.includes('total_distance') || normalizedCode.includes('total') ||
+                        normalizedCode.includes('расстояние')) &&
+                    (normalizedCode.includes('600') || normalizedCode.includes('600'))) {
+                    return "600";
+                }
+                return "Ошибка: программа не вычисляет правильное расстояние патрулирования";
+
+            case 3:
+                const hasConditional = normalizedCode.includes('if') || normalizedCode.includes('elif') || normalizedCode.includes('else');
+                const hasBatteryCheck = normalizedCode.includes('25') || normalizedCode.includes('battery');
+                const hasCorrectOutput = normalizedCode.includes('поиск зарядной станции') ||
+                    normalizedCode.includes('поиск') ||
+                    normalizedCode.includes('зарядк');
+
+                if (hasConditional && hasBatteryCheck && hasCorrectOutput) {
+                    return "Поиск зарядной станции";
+                }
+                return "Ошибка: проверьте условие для battery_level=25";
+
+            case 4:
+                const hasFunction = normalizedCode.includes('def') || normalizedCode.includes('функц');
+                const hasFunctionName = normalizedCode.includes('calculate_delivery_time') ||
+                    normalizedCode.includes('delivery_time') ||
+                    normalizedCode.includes('время_доставки');
+                const hasCorrectCalculations = (normalizedCode.includes('400') || normalizedCode.includes('800/2')) &&
+                    (normalizedCode.includes('800') || normalizedCode.includes('1200/1.5'));
+
+                if (hasFunction && hasFunctionName && hasCorrectCalculations) {
+                    return "400.0\n800.0";
+                }
+                return "Ошибка: создайте функцию calculate_delivery_time и вызовите ее дважды";
+
+            case 5:
+                const hasLoop = normalizedCode.includes('for') || normalizedCode.includes('while') || normalizedCode.includes('цикл');
+                const hasList = normalizedCode.includes('measurements') || normalizedCode.includes('1.2') || normalizedCode.includes('данные');
+                const hasCondition = normalizedCode.includes('if') || normalizedCode.includes('условие');
+                const hasDangerCount = normalizedCode.includes('опасные') || normalizedCode.includes('danger') || normalizedCode.includes('2');
+                const hasAverage = normalizedCode.includes('среднее') || normalizedCode.includes('average') || normalizedCode.includes('1.6');
+
+                if (hasLoop && hasList && hasCondition && hasDangerCount && hasAverage) {
+                    return "Опасные ситуации: 2\nСреднее расстояние: 1.6";
+                }
+                return "Ошибка: обработайте список измерений, найдя опасные ситуации и среднее расстояние";
+
+            default:
+                return "Код выполнен, но результат не распознан";
+        }
+    };
+
+    const executeCode = () => {
+        if (!userCode.trim()) {
+            toast({
+                title: "Код пуст",
+                description: "Напишите программу перед запуском",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsExecuting(true);
+        setOutput([]);
+
+        setTimeout(() => {
+            try {
+                const simulatedOutput = simulateCodeExecution(userCode, currentTaskData?.id || 1);
+                setOutput(simulatedOutput.split('\n'));
+
+                toast({
+                    title: "Код выполнен",
+                    description: "Проверьте результат в выводе",
+                });
+            } catch (error) {
+                setOutput([`Ошибка: ${error}`]);
+                toast({
+                    title: "Ошибка выполнения",
+                    description: "Проверьте синтаксис кода",
+                    variant: "destructive",
+                });
+            } finally {
+                setIsExecuting(false);
+            }
+        }, 1000);
+    };
+
+    const handleAnswerSubmit = () => {
+        if (!currentTaskData) return;
+
+        const userOutput = output.join('\n').trim();
+        const expectedOutput = currentTaskData.answer.trim();
+
+        let isCorrect = false;
+
+        switch (currentTaskData.id) {
+            case 1:
+                isCorrect = userOutput === "2.5" || userOutput === "2.50" || userOutput === "2.500";
+                break;
+            case 2:
+                isCorrect = userOutput === "600" || userOutput === "600.0" || userOutput === "600.00";
+                break;
+            case 3:
+                isCorrect = userOutput.includes("Поиск зарядной станции") ||
+                    userOutput.includes("поиск зарядной станции");
+                break;
+            case 4:
+                const lines = userOutput.split('\n').map(line => line.trim());
+                isCorrect = (lines[0] === "400.0" || lines[0] === "400" || lines[0] === "400.00") &&
+                    (lines[1] === "800.0" || lines[1] === "800" || lines[1] === "800.00");
+                break;
+            case 5:
+                isCorrect = userOutput.includes("Опасные ситуации: 2") &&
+                    (userOutput.includes("Среднее расстояние: 1.6") ||
+                        userOutput.includes("Среднее расстояние: 1.60"));
+                break;
+            default:
+                isCorrect = userOutput === expectedOutput;
+        }
+
+        if (isCorrect) {
+            const updatedTasks = tasks.map(task =>
+                task.id === currentTask ? { ...task, completed: true } : task
+            );
+            setTasks(updatedTasks);
+
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 3000);
+
+            toast({
+                title: "Правильно! 🎉",
+                description: `Вы заработали ${currentTaskData.points} очков`,
+            });
+
+            if (currentTask < tasks.length) {
+                setTimeout(() => {
+                    setCurrentTask(currentTask + 1);
+                    setOutput([]);
+                    setViewMode('textbook');
+                }, 1500);
+            }
+        } else {
+            toast({
+                title: "Попробуйте еще раз",
+                description: "Вывод программы не совпадает с ожидаемым",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleStartPractice = () => {
+        setViewMode('practice');
+    };
+
+    const handleBackToTheory = () => {
+        setViewMode('theory');
+    };
+
+    return (
+        <div className="min-h-screen relative">
+            {/* АНИМАЦИОННЫЙ ФОН */}
+            <ProgrammingBackground />
+
+            {/* CSS конфетти эффект */}
+            {showConfetti && (
+                <div className="fixed inset-0 z-50 pointer-events-none">
+                    {[...Array(100)].map((_, i) => (
+                        <div
+                            key={i}
+                            className="absolute w-3 h-3 rounded-full"
+                            style={{
+                                background: `hsl(${Math.random() * 360}, 100%, 60%)`,
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * 100}%`,
+                                animation: `confetti-fall ${1 + Math.random() * 2}s linear forwards`,
+                                animationDelay: `${Math.random() * 0.5}s`,
+                                transform: `rotate(${Math.random() * 360}deg)`
+                            }}
+                        />
+                    ))}
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sensor">Тип датчика</Label>
-                  <Select
-                    value={robotConfig.sensor}
-                    onValueChange={(value) => setRobotConfig({ ...robotConfig, sensor: value as SensorType })}
-                    disabled={isRobotBuilt}
-                  >
-                    <SelectTrigger id="sensor" data-testid="select-sensor">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Нет датчика</SelectItem>
-                      <SelectItem value="line">Датчик линии</SelectItem>
-                      <SelectItem value="ultrasonic">Ультразвуковой</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="microcontroller">Микроконтроллер</Label>
-                  <Select
-                    value={robotConfig.microcontroller}
-                    onValueChange={(value) => setRobotConfig({ ...robotConfig, microcontroller: value as MicrocontrollerType })}
-                    disabled={isRobotBuilt}
-                  >
-                    <SelectTrigger id="microcontroller" data-testid="select-microcontroller">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="arduino">Arduino</SelectItem>
-                      <SelectItem value="lego">Lego Mindstorms</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {!isRobotBuilt ? (
-                  <Button 
-                    onClick={handleBuildRobot} 
-                    className="w-full"
-                    data-testid="button-build-robot"
-                  >
-                    <Bot className="w-4 h-4 mr-2" />
-                    Собрать робота
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={() => setIsRobotBuilt(false)} 
-                    variant="outline" 
-                    className="w-full"
-                    data-testid="button-rebuild-robot"
-                  >
-                    Изменить конфигурацию
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Code className="w-5 h-5" />
-                  Программирование
-                </CardTitle>
-                <CardDescription>Задайте команды для робота</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="speed">Скорость (1-10)</Label>
-                  <Input
-                    id="speed"
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={command.speed}
-                    onChange={(e) => setCommand({ ...command, speed: Number(e.target.value) })}
-                    disabled={!isRobotBuilt}
-                    data-testid="input-speed"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="direction">Направление (градусы, 0-359)</Label>
-                  <Input
-                    id="direction"
-                    type="number"
-                    min="0"
-                    max="359"
-                    value={command.direction}
-                    onChange={(e) => setCommand({ ...command, direction: Number(e.target.value) })}
-                    disabled={!isRobotBuilt}
-                    data-testid="input-direction"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Длительность (мс)</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    min="1000"
-                    max="30000"
-                    step="1000"
-                    value={command.duration}
-                    onChange={(e) => setCommand({ ...command, duration: Number(e.target.value) })}
-                    disabled={!isRobotBuilt}
-                    data-testid="input-duration"
-                  />
-                </div>
-
-                <Button 
-                  onClick={handleUpdateCommand} 
-                  className="w-full" 
-                  disabled={!isRobotBuilt}
-                  data-testid="button-update-command"
-                >
-                  Обновить команду
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Download className="w-5 h-5" />
-                  Экспорт кода
-                </CardTitle>
-                <CardDescription>Скопируйте код для Arduino</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea
-                  value={generateArduinoCode()}
-                  readOnly
-                  className="font-mono text-xs h-32 resize-none"
-                  data-testid="textarea-arduino-code"
-                />
-                <Button 
-                  onClick={handleExportCode} 
-                  variant="outline" 
-                  className="w-full"
-                  data-testid="button-export-code"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Копировать код
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-3 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Физическая симуляция</CardTitle>
-                <CardDescription>Тестируйте робота в виртуальной среде</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isRobotBuilt ? (
-                  <PhysicsSimulator
-                    robotConfig={robotConfig}
-                    command={command}
-                    levelId={selectedLevel}
-                    onSuccess={handleSuccess}
-                    onFailure={handleFailure}
-                  />
-                ) : (
-                  <Alert data-testid="alert-robot-not-built">
-                    <AlertDescription data-testid="text-build-robot-first">
-                      Сначала соберите робота в конструкторе слева
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-
-            {feedback && (
-              <Alert 
-                variant={feedback.type === "error" ? "destructive" : "default"}
-                data-testid={`alert-${feedback.type}`}
-              >
-                <AlertTitle data-testid="alert-title">
-                  {feedback.type === "success" ? "Успех!" : feedback.type === "error" ? "Ошибка" : "Информация"}
-                </AlertTitle>
-                <AlertDescription data-testid="alert-description">{feedback.message}</AlertDescription>
-              </Alert>
             )}
 
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Уровни заданий</h2>
-              <div className="grid md:grid-cols-3 gap-4">
-                {levels.map(level => (
-                  <Card 
-                    key={level.id} 
-                    className={`${!level.unlocked ? "opacity-50" : "hover-elevate"} ${selectedLevel === level.id ? "ring-2 ring-primary" : ""}`}
-                    data-testid={`card-level-${level.id}`}
-                  >
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant={level.completed ? "default" : level.unlocked ? "outline" : "secondary"}>
-                          {level.difficulty === "easy" ? "Легко" : level.difficulty === "medium" ? "Средне" : "Сложно"}
-                        </Badge>
-                        {level.completed && <CheckCircle className="w-5 h-5 text-chart-2" />}
-                        {!level.unlocked && <Lock className="w-5 h-5 text-muted-foreground" />}
-                      </div>
-                      <CardTitle className="text-lg">{level.title}</CardTitle>
-                      <CardDescription className="text-sm">{level.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">{level.objective}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 text-sm text-chart-3">
-                          <Trophy className="w-4 h-4" />
-                          <span>+{level.pointsReward}</span>
+            {/* Основной контент поверх фона */}
+            <div className="relative z-10">
+                <div className="container mx-auto px-4 py-8">
+                    {/* Header */}
+                    <header className="mb-12">
+                        <div className="flex justify-between items-center mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm flex items-center justify-center border border-purple-500/30 shadow-xl">
+                                    <Code2 className="w-12 h-12 text-purple-300" />
+                                </div>
+                                <div>
+                                    <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-100 to-white bg-clip-text text-transparent drop-shadow-lg">
+                                        Программирование роботов
+                                    </h1>
+
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={goToProfile}
+                                    className="border-purple-400 text-purple-300 hover:bg-purple-400/10 hover:text-white backdrop-blur-sm shadow-lg"
+                                    size="lg"
+                                >
+                                    <User className="w-5 h-5 mr-2" />
+                                    Профиль
+                                </Button>
+
+                                {viewMode === 'practice' && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleBackToTheory}
+                                        className="border-purple-400 text-purple-300 hover:bg-purple-400/10 backdrop-blur-sm shadow-lg"
+                                        size="lg"
+                                    >
+                                        <BookOpen className="w-5 h-5 mr-2" />
+                                        К теории
+                                    </Button>
+                                )}
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setLocation("/disciplines")}
+                                    className="border-purple-400 text-purple-300 hover:bg-purple-400/10 backdrop-blur-sm shadow-lg"
+                                    size="lg"
+                                >
+                                    <ArrowLeft className="w-5 h-5 mr-2" />
+                                    К дисциплинам
+                                </Button>
+                            </div>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => setSelectedLevel(level.id)}
-                          disabled={!level.unlocked}
-                          variant={selectedLevel === level.id ? "default" : "outline"}
-                          data-testid={`button-select-level-${level.id}`}
-                        >
-                          {selectedLevel === level.id ? "Выбран" : "Выбрать"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+
+                        <Card className="bg-gradient-to-br from-gray-900/60 to-purple-900/30 backdrop-blur-md border-purple-500/20 shadow-xl">
+                            <CardContent className="p-6">
+                                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-white text-2xl mb-2">Ваш прогресс по программированию</h3>
+                                        <p className="text-purple-100">
+                                            Вы изучили <span className="font-bold text-purple-300">{completedTasks}</span> из <span className="font-bold">{tasks.length}</span> заданий
+                                        </p>
+                                        <Progress
+                                            value={(completedTasks / tasks.length) * 100}
+                                            className="h-4 bg-gray-800 border border-gray-700 mt-4"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <Badge className="text-2xl px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white border-purple-500/30 shadow-lg">
+                                            🏆 {totalPoints} баллов
+                                        </Badge>
+                                        <p className="text-purple-200 text-sm mt-2">Собери все достижения!</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </header>
+
+
+
+                    {/* Вкладки для переключения режимов */}
+                    <Tabs value={viewMode} className="max-w-6xl mx-auto mb-8">
+                        <TabsList className="grid w-full grid-cols-2 bg-gray-800/60 backdrop-blur-sm">
+                            <TabsTrigger
+                                value="textbook"
+                                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-cyan-500 data-[state=active]:text-white"
+                                onClick={() => setViewMode('textbook')}
+                            >
+                                <GraduationCap className="w-4 h-4 mr-2" />
+                                Учебник
+                            </TabsTrigger>
+
+                            <TabsTrigger
+                                value="practice"
+                                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+                                onClick={() => setViewMode('practice')}
+                            >
+                                <Code2 className="w-4 h-4 mr-2" />
+                                Практика
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+
+
+                    <div className="grid lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-1">
+                            <Card className="bg-gray-900/60 backdrop-blur-md border-purple-500/20 shadow-xl">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-white">Задания раздела</CardTitle>
+                                        <Badge className="bg-gradient-to-r from-purple-600 to-pink-500 text-white">
+                                            {selectedCategory === 'all' ? '📚 Все разделы' :
+                                                selectedCategory === 'variables' ? '🔢 Переменные' :
+                                                    selectedCategory === 'loops' ? '🔄 Циклы' :
+                                                        selectedCategory === 'conditions' ? '🎯 Условия' :
+                                                            selectedCategory === 'functions' ? '🔧 Функции' : '🚀 Алгоритмы'}
+                                        </Badge>
+                                    </div>
+                                    <CardDescription className="text-purple-100">
+                                        {selectedCategory === 'all'
+                                            ? `${completedTasks} из ${tasks.length} заданий выполнено`
+                                            : `${completedSectionTasks} из ${sectionTasks.length} заданий выполнено`}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    {filteredTasks.map((task) => (
+                                        <div
+                                            key={task.id}
+                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all backdrop-blur-sm ${currentTask === task.id
+                                                ? "border-purple-500 bg-gradient-to-r from-purple-900/40 to-pink-900/20 shadow-lg"
+                                                : task.completed
+                                                    ? "border-green-400/30 bg-gradient-to-r from-green-900/20 to-emerald-900/10"
+                                                    : "border-gray-700/50 bg-gradient-to-br from-gray-900/30 to-gray-800/20 hover:border-purple-500/40 hover:bg-purple-900/10"
+                                                }`}
+                                            onClick={() => {
+                                                setCurrentTask(task.id);
+                                                setUserCode("");
+                                                resetAnimation();
+                                                setViewMode('textbook');
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${task.completed
+                                                        ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                                                        : currentTask === task.id
+                                                            ? "bg-gradient-to-r from-purple-600 to-pink-500"
+                                                            : "bg-gradient-to-r from-gray-700 to-gray-600"
+                                                        }`}>
+                                                        {task.completed ? (
+                                                            <CheckCircle className="w-5 h-5 text-white" />
+                                                        ) : (
+                                                            <span className="text-white text-sm font-bold">{task.id}</span>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-medium text-white text-sm">{task.title}</h4>
+                                                        <p className="text-xs text-purple-200">{task.description}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <Badge className={
+                                                        task.category === 'variables'
+                                                            ? "bg-gradient-to-r from-blue-600/30 to-cyan-500/30 text-blue-300 border-blue-500/30 text-xs" :
+                                                            task.category === 'loops'
+                                                                ? "bg-gradient-to-r from-green-600/30 to-emerald-500/30 text-green-300 border-green-500/30 text-xs" :
+                                                                task.category === 'conditions'
+                                                                    ? "bg-gradient-to-r from-purple-600/30 to-pink-500/30 text-purple-300 border-purple-500/30 text-xs" :
+                                                                    task.category === 'functions'
+                                                                        ? "bg-gradient-to-r from-orange-600/30 to-yellow-500/30 text-orange-300 border-orange-500/30 text-xs" :
+                                                                        "bg-gradient-to-r from-red-600/30 to-rose-500/30 text-red-300 border-red-500/30 text-xs"
+                                                    }>
+                                                        {task.category === 'variables' ? '🔢 Переменные' :
+                                                            task.category === 'loops' ? '🔄 Циклы' :
+                                                                task.category === 'conditions' ? '🎯 Условия' :
+                                                                    task.category === 'functions' ? '🔧 Функции' : '🚀 Алгоритмы'}
+                                                    </Badge>
+                                                    {task.completed && (
+                                                        <div className="flex items-center gap-1 text-xs text-green-300">
+                                                            <Trophy className="w-3 h-3" />
+                                                            <span>+{task.points}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {task.completed && (
+                                                <div className="mt-3 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-5 h-5 rounded-full bg-gradient-to-r from-green-600/30 to-emerald-500/30 flex items-center justify-center">
+                                                            <Trophy className="w-3 h-3 text-green-300" />
+                                                        </div>
+                                                        <span className="text-sm text-green-300">Задание выполнено!</span>
+                                                    </div>
+                                                    <span className="text-xs bg-gradient-to-r from-green-600/20 to-emerald-500/20 text-green-300 px-2 py-1 rounded">
+                                                        +{task.points} баллов
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <div className="lg:col-span-2 space-y-8">
+                            {/* УЧЕБНИК: Академическая теория */}
+                            {viewMode === 'textbook' && currentTaskData && (
+                                <Card className="border-blue-500/20 bg-gradient-to-br from-gray-900/60 to-blue-900/20 backdrop-blur-md shadow-xl">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 flex items-center justify-center border border-blue-500/30">
+                                                    <GraduationCap className="w-6 h-6 text-blue-300" />
+                                                </div>
+                                                <div>
+                                                    <CardTitle className="text-white text-2xl">Учебник: {currentTaskData.title}</CardTitle>
+                                                    <CardDescription className="text-blue-100">
+                                                        Академическая теория и фундаментальные знания
+                                                    </CardDescription>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="default"
+                                                size="lg"
+                                                onClick={() => setViewMode('practice')}
+                                                className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white shadow-lg"
+                                            >
+                                                <ArrowRight className="w-5 h-5 mr-2" />
+                                                Перейти к практике
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        {/* Формальные определения */}
+                                        <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/20 p-6 rounded-xl border border-blue-500/30">
+                                            <h3 className="font-bold text-xl mb-4 text-white flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500/30 to-cyan-500/30 flex items-center justify-center">
+                                                    <BookOpen className="w-4 h-4 text-blue-300" />
+                                                </div>
+                                                Формальные определения
+                                            </h3>
+                                            <div className="space-y-3">
+                                                {currentTaskData.academicTheory.definitions.map((definition, index) => (
+                                                    <div key={index} className="p-4 bg-gradient-to-r from-blue-900/20 to-cyan-900/10 rounded-lg border border-blue-500/20">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                                                <span className="text-white text-xs font-bold">{index + 1}</span>
+                                                            </div>
+                                                            <p className="text-blue-100 text-lg leading-relaxed">{definition}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Формулы */}
+                                        {currentTaskData.academicTheory.formulas.length > 0 && (
+                                            <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/20 p-6 rounded-xl border border-green-500/30">
+                                                <h3 className="font-bold text-xl mb-4 text-white flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500/30 to-emerald-500/30 flex items-center justify-center">
+                                                        <Calculator className="w-4 h-4 text-green-300" />
+                                                    </div>
+                                                    Ключевые формулы
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    {currentTaskData.academicTheory.formulas.map((formula, index) => (
+                                                        <div key={index} className="p-4 bg-gradient-to-r from-green-900/20 to-emerald-900/10 rounded-lg border border-green-500/20">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-600 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                                                                    <span className="text-white text-sm font-bold">ƒ</span>
+                                                                </div>
+                                                                <p className="text-green-100 text-lg font-mono">{formula}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Принципы */}
+                                        <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/20 p-6 rounded-xl border border-purple-500/30">
+                                            <h3 className="font-bold text-xl mb-4 text-white flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 flex items-center justify-center">
+                                                    <Brain className="w-4 h-4 text-purple-300" />
+                                                </div>
+                                                Основные принципы
+                                            </h3>
+                                            <div className="space-y-3">
+                                                {currentTaskData.academicTheory.principles.map((principle, index) => (
+                                                    <div key={index} className="p-4 bg-gradient-to-r from-purple-900/20 to-pink-900/10 rounded-lg border border-purple-500/20">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                                                <span className="text-white text-xs font-bold">✓</span>
+                                                            </div>
+                                                            <p className="text-purple-100 text-lg">{principle}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Примеры из учебника */}
+                                        <div className="bg-gradient-to-br from-amber-900/30 to-yellow-900/20 p-6 rounded-xl border border-amber-500/30">
+                                            <h3 className="font-bold text-xl mb-4 text-white flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-500/30 to-yellow-500/30 flex items-center justify-center">
+                                                    <Lightbulb className="w-4 h-4 text-amber-300" />
+                                                </div>
+                                                Примеры из учебника
+                                            </h3>
+                                            <div className="space-y-4">
+                                                {currentTaskData.academicTheory.textbookExamples.map((example, index) => (
+                                                    <div key={index} className="p-5 bg-gradient-to-r from-amber-900/20 to-yellow-900/10 rounded-lg border border-amber-500/20">
+                                                        <h4 className="font-semibold text-amber-200 mb-2">Пример {index + 1}:</h4>
+                                                        <div className="mb-3 p-3 bg-gradient-to-r from-gray-900/40 to-gray-800/40 rounded border border-gray-700">
+                                                            <p className="text-white text-lg">{example.problem}</p>
+                                                        </div>
+                                                        <div className="mb-3 p-3 bg-gradient-to-r from-green-900/30 to-emerald-900/20 rounded border border-green-500/20">
+                                                            <p className="text-green-200 font-semibold">Решение: {example.solution}</p>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <p className="text-amber-200 font-medium">Пошаговое решение:</p>
+                                                            {example.steps.map((step, stepIndex) => (
+                                                                <div key={stepIndex} className="flex items-start gap-2">
+                                                                    <div className="w-2 h-2 rounded-full bg-amber-400 mt-2 flex-shrink-0"></div>
+                                                                    <p className="text-amber-100">{step}</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Рекомендация к практике */}
+                                        <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-6 rounded-xl border border-purple-500/30 text-center">
+                                            <h3 className="font-bold text-2xl text-white mb-3">Готовы применить знания на практике?</h3>
+                                            <p className="text-purple-100 mb-6 text-lg">
+                                                Вы изучили теоретическую базу. Теперь самое время применить знания для решения практической задачи!
+                                            </p>
+                                            <Button
+                                                size="lg"
+                                                className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white text-lg px-8 py-6"
+                                                onClick={() => setViewMode('practice')}
+                                            >
+                                                <Code2 className="w-6 h-6 mr-3" />
+                                                Перейти к практическому заданию
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Теоретический материал с разбором */}
+                            {viewMode === 'theory' && currentTaskData && (
+                                <Card className="border-purple-500/20 bg-gradient-to-br from-gray-900/60 to-purple-900/20 backdrop-blur-md shadow-xl">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
+                                                    <BookOpen className="w-6 h-6 text-purple-300" />
+                                                </div>
+                                                <div>
+                                                    <CardTitle className="text-white text-2xl">Изучаем теория</CardTitle>
+                                                    <CardDescription className="text-purple-100">
+                                                        Изучите теорию перед решением основной задачи
+                                                    </CardDescription>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="default"
+                                                size="lg"
+                                                onClick={handleStartPractice}
+                                                className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white shadow-lg"
+                                            >
+                                                <ArrowRight className="w-5 h-5 mr-2" />
+                                                Перейти к задаче
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        {/* Весёлая теория */}
+                                        <div className="bg-gradient-to-br from-yellow-900/20 to-amber-900/20 p-5 rounded-xl border border-yellow-500/30">
+                                            <h3 className="font-bold text-lg mb-3 text-yellow-200 flex items-center gap-2">
+                                                <Sparkles className="w-5 h-5 text-yellow-300" />
+                                                {currentTaskData.funTheory.title}
+                                            </h3>
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="space-y-3">
+                                                    <div className="p-3 bg-gradient-to-r from-yellow-900/30 to-amber-900/20 rounded-lg">
+                                                        <h4 className="font-semibold text-yellow-100 mb-1">🤔 Простая аналогия:</h4>
+                                                        <p className="text-yellow-50 text-sm">{currentTaskData.funTheory.analogy}</p>
+                                                    </div>
+                                                    <div className="p-3 bg-gradient-to-r from-yellow-900/30 to-amber-900/20 rounded-lg">
+                                                        <h4 className="font-semibold text-yellow-100 mb-1">💡 Простое объяснение:</h4>
+                                                        <p className="text-yellow-50 text-sm">{currentTaskData.funTheory.simpleExplanation}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="p-3 bg-gradient-to-r from-yellow-900/30 to-amber-900/20 rounded-lg">
+                                                        <h4 className="font-semibold text-yellow-100 mb-1">👀 Что смотреть в анимации:</h4>
+                                                        <p className="text-yellow-50 text-sm">{currentTaskData.funTheory.visualizationTip}</p>
+                                                    </div>
+                                                    <div className="p-3 bg-gradient-to-r from-yellow-900/30 to-amber-900/20 rounded-lg">
+                                                        <h4 className="font-semibold text-yellow-100 mb-1">🎯 Интересный факт:</h4>
+                                                        <p className="text-yellow-50 text-sm">{currentTaskData.funTheory.funFact}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Расширенная теория */}
+                                        <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/20 p-5 rounded-xl border border-blue-500/30">
+                                            <h3 className="font-bold text-lg mb-3 text-white flex items-center gap-2">
+                                                <GraduationCap className="w-5 h-5 text-blue-300" />
+                                                {currentTaskData.extendedTheory.title}
+                                            </h3>
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="space-y-3">
+                                                    <div className="p-3 bg-gradient-to-r from-blue-900/30 to-cyan-900/20 rounded-lg">
+                                                        <h4 className="font-semibold text-blue-100 mb-1">📚 Определение:</h4>
+                                                        <p className="text-blue-50 text-sm">{currentTaskData.extendedTheory.definition}</p>
+                                                    </div>
+                                                    <div className="p-3 bg-gradient-to-r from-blue-900/30 to-cyan-900/20 rounded-lg">
+                                                        <h4 className="font-semibold text-blue-100 mb-1">🔑 Ключевые моменты:</h4>
+                                                        <ul className="space-y-1">
+                                                            {currentTaskData.extendedTheory.keyPoints.map((point, index) => (
+                                                                <li key={index} className="text-blue-50 text-sm flex items-start gap-2">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0"></div>
+                                                                    {point}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="p-3 bg-gradient-to-r from-blue-900/30 to-cyan-900/20 rounded-lg">
+                                                        <h4 className="font-semibold text-blue-100 mb-1">🌍 Примеры в реальном мире:</h4>
+                                                        <ul className="space-y-1">
+                                                            {currentTaskData.extendedTheory.realWorldExamples.map((example, index) => (
+                                                                <li key={index} className="text-blue-50 text-sm flex items-start gap-2">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 flex-shrink-0"></div>
+                                                                    {example}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                    <div className="p-3 bg-gradient-to-r from-blue-900/30 to-cyan-900/20 rounded-lg">
+                                                        <h4 className="font-semibold text-blue-100 mb-1">🧠 Основные концепции:</h4>
+                                                        <ul className="space-y-1">
+                                                            {currentTaskData.extendedTheory.concepts.map((concept, index) => (
+                                                                <li key={index} className="text-blue-50 text-sm flex items-start gap-2">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-300 mt-1.5 flex-shrink-0"></div>
+                                                                    {concept}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Пример задачи */}
+                                        <div className="bg-gradient-to-br from-gray-900/50 to-purple-900/20 p-6 rounded-xl border border-purple-500/30">
+                                            <h3 className="font-bold text-xl mb-4 text-white flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 flex items-center justify-center">
+                                                    <Target className="w-4 h-4 text-purple-300" />
+                                                </div>
+                                                Пример задачи:
+                                            </h3>
+                                            <div className="text-lg text-purple-50 mb-6 bg-gradient-to-r from-gray-900/40 to-purple-900/30 p-5 rounded-xl border border-purple-500/30">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                                        <Calculator className="w-5 h-5 text-white" />
+                                                    </div>
+                                                    <p className="text-lg leading-relaxed">{currentTaskData.theoryExample.problem}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Практическая часть */}
+                            {viewMode === 'practice' && currentTaskData && (
+                                <Card className="bg-gray-900/60 backdrop-blur-md border-purple-500/20 shadow-xl">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-2xl text-white">{currentTaskData.title}</CardTitle>
+                                                <CardDescription className="text-purple-100">{currentTaskData.description}</CardDescription>
+                                            </div>
+                                            <Badge className="text-lg px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 text-white border-purple-500/30">
+                                                🎯 {currentTaskData.points} баллов
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        {/* Problem Statement */}
+                                        <div className="bg-gradient-to-br from-gray-800/60 to-purple-900/30 p-6 rounded-xl border border-purple-500/20 backdrop-blur-sm">
+                                            <h3 className="font-semibold mb-4 text-white flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 flex items-center justify-center">
+                                                    <Target className="w-4 h-4 text-purple-300" />
+                                                </div>
+                                                Условие задачи:
+                                            </h3>
+                                            <div className="text-lg leading-relaxed whitespace-pre-line text-purple-50 bg-gradient-to-r from-gray-900/40 to-purple-900/20 p-5 rounded-lg border border-purple-500/30">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                                        <Calculator className="w-5 h-5 text-white" />
+                                                    </div>
+                                                    <p className="text-lg">{currentTaskData.problem}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Editor and Output */}
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-sm font-medium flex items-center gap-2 text-white">
+                                                    <Code2 className="w-4 h-4 text-purple-300" />
+                                                    Программа для робота:
+                                                </label>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        onClick={executeCode}
+                                                        disabled={isExecuting}
+                                                        variant="default"
+                                                        size="sm"
+                                                        className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600"
+                                                    >
+                                                        {isExecuting ? (
+                                                            <>
+                                                                <Square className="w-4 h-4 mr-2" />
+                                                                Выполняется...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Play className="w-4 h-4 mr-2" />
+                                                                Запустить код
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setUserCode(currentTaskData.starterCode);
+                                                            resetAnimation();
+                                                        }}
+                                                        className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                                                    >
+                                                        <RotateCcw className="w-4 h-4 mr-2" />
+                                                        Сброс
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            <div className="border border-purple-500/30 rounded-lg overflow-hidden bg-gray-950">
+                                                <textarea
+                                                    value={userCode}
+                                                    onChange={(e) => setUserCode(e.target.value)}
+                                                    className="w-full h-64 p-4 font-mono text-sm text-white bg-gray-950 resize-none focus:outline-none"
+                                                    placeholder="Напишите программу для робота здесь..."
+                                                    disabled={currentTaskData.completed}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Вывод программы */}
+                                        <div className="space-y-4">
+                                            <label className="text-sm font-medium flex items-center gap-2 text-white">
+                                                <Terminal className="w-4 h-4 text-purple-300" />
+                                                Вывод системы робота:
+                                            </label>
+                                            <div className="border border-purple-500/30 rounded-lg bg-black p-4 min-h-20 font-mono text-sm text-green-400 whitespace-pre-wrap">
+                                                {output.length === 0 ? (
+                                                    <span className="text-gray-500">Запустите код чтобы увидеть результат...</span>
+                                                ) : (
+                                                    output.map((line, index) => (
+                                                        <div key={index}>{line}</div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Answer Input */}
+                                        <div className="flex gap-3">
+                                            <Button
+                                                onClick={handleAnswerSubmit}
+                                                disabled={output.length === 0 || currentTaskData.completed}
+                                                className="flex-1 py-6 text-lg bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600"
+                                            >
+                                                {currentTaskData.completed ? (
+                                                    <>
+                                                        <CheckCircle className="w-6 h-6 mr-2" />
+                                                        Задание выполнено
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        Проверить решение
+                                                        <ChevronRight className="w-5 h-5 ml-2" />
+                                                    </>
+                                                )}
+                                            </Button>
+
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="lg"
+                                                        className="py-6 border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                                                    >
+                                                        <Lightbulb className="w-5 h-5 mr-2" />
+                                                        Подсказка
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="bg-gray-900 border-purple-500/30">
+                                                    <DialogHeader>
+                                                        <DialogTitle className="text-white">Подсказка по программированию</DialogTitle>
+                                                        <DialogDescription className="text-purple-100 text-lg">
+                                                            {currentTaskData.hint}
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
+
+                                        {/* Explanation Dialog */}
+                                        <Dialog open={showExplanation} onOpenChange={setShowExplanation}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="ghost" className="w-full text-purple-300 hover:text-purple-200 hover:bg-purple-400/10">
+                                                    <div className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 flex items-center justify-center mr-2">
+                                                        <HelpCircle className="w-3 h-3 text-purple-300" />
+                                                    </div>
+                                                    Показать объяснение решения
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="max-w-2xl bg-gray-900 border-purple-500/30">
+                                                <DialogHeader>
+                                                    <DialogTitle className="text-white">Объяснение решения</DialogTitle>
+                                                    <DialogDescription className="space-y-3 whitespace-pre-line text-purple-100 text-lg">
+                                                        {currentTaskData.explanation}
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                            </DialogContent>
+                                        </Dialog>
+
+                                        {/* Completion Message */}
+                                        {completedTasks === tasks.length && tasks.length > 0 && (
+                                            <div className="bg-gradient-to-r from-green-600 to-emerald-500 p-8 rounded-xl text-white text-center border border-green-400/30 shadow-xl">
+                                                <div className="w-20 h-20 rounded-full bg-gradient-to-r from-green-500 to-emerald-400 mx-auto mb-6 flex items-center justify-center shadow-lg">
+                                                    <Trophy className="w-10 h-10 text-white" />
+                                                </div>
+                                                <h3 className="text-3xl font-bold mb-2">Поздравляем! 🎉</h3>
+                                                <p className="text-xl mb-6 opacity-90">Вы успешно завершили ВСЕ задания по программированию!</p>
+                                                <div className="grid md:grid-cols-3 gap-4 mb-6">
+                                                    <div className="p-4 bg-white/10 rounded-lg">
+                                                        <div className="text-2xl font-bold">{completedTasks}</div>
+                                                        <div className="text-sm">заданий выполнено</div>
+                                                    </div>
+                                                    <div className="p-4 bg-white/10 rounded-lg">
+                                                        <div className="text-2xl font-bold">{totalPoints}</div>
+                                                        <div className="text-sm">баллов заработано</div>
+                                                    </div>
+                                                    <div className="p-4 bg-white/10 rounded-lg">
+                                                        <div className="text-2xl font-bold">5</div>
+                                                        <div className="text-sm">разделов изучено</div>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    onClick={() => setLocation("/disciplines")}
+                                                    variant="secondary"
+                                                    size="lg"
+                                                    className="bg-white text-green-700 hover:bg-gray-100 hover:text-green-800 font-bold px-8"
+                                                >
+                                                    <Trophy className="w-5 h-5 mr-2" />
+                                                    Вернуться к дисциплинам
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            {/* Глобальные стили анимаций */}
+            <style jsx global>{`
+        @keyframes confetti-fall {
+          0% {
+            transform: translateY(-100px) rotate(0deg) scale(0);
+            opacity: 1;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(100vh) rotate(720deg) scale(1);
+            opacity: 0;
+          }
+        }
+      `}</style>
         </div>
-      </main>
-    </div>
-  );
+    );
 }

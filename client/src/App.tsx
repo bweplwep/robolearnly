@@ -6,10 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Landing from "@/pages/landing";
 import Game from "@/pages/game";
 import NotFound from "@/pages/not-found";
-import Disciplines from "./pages/Disciplines";
+import Disciplines from "@/pages/Disciplines";     // ← Исправлено
 import MathTasks from "./pages/MathTasks";
 import PhysicsTasks from "./pages/PhysicsTasks";
-import Profile from "./pages/Profile"; // Добавляем импорт профиля
+import Profile from "./pages/Profile";
 
 function Router() {
   return (
@@ -19,7 +19,7 @@ function Router() {
       <Route path="/math-tasks" component={MathTasks} />
       <Route path="/physics-tasks" component={PhysicsTasks} />
       <Route path="/game" component={Game} />
-      <Route path="/profile" component={Profile} /> {/* Добавляем маршрут профиля */}
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -19,23 +19,44 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
-  // dev mode only
-  const serverOptions = { middlewareMode: true, hmr: { server }, allowedHosts: true as const };
+  const serverOptions = {
+    middlewareMode: true,
+    hmr: { server },
+    allowedHosts: true as const,
+  };
+
   const vite = await createViteServer({
     ...viteConfig,
     configFile: false,
-    customLogger: { ...viteLogger, error: (msg) => { viteLogger.error(msg); process.exit(1); } },
+    customLogger: {
+      ...viteLogger,
+      error: (msg, options) => {
+        viteLogger.error(msg, options);
+        process.exit(1);
+      },
+    },
     server: serverOptions,
     appType: "custom",
   });
 
   app.use(vite.middlewares);
+
   app.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
     try {
-      const clientTemplate = path.resolve(import.meta.dirname, "..", "client", "index.html");
+      const clientTemplate = path.resolve(
+        import.meta.dirname,
+        "..",
+        "client",
+        "index.html"
+      );
+
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(`src="/src/main.tsx"`, `src="/src/main.tsx?v=${nanoid()}"`);
-      const page = await vite.transformIndexHtml(req.originalUrl, template);
+      template = template.replace(
+        `src="/src/main.tsx"`,
+        `src="/src/main.tsx?v=${nanoid()}"`
+      );
+      const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
@@ -45,34 +66,28 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // Несколько вариантов путей — один из них сработает
-  const possiblePaths = [
-    path.resolve(import.meta.dirname, "dist", "public"),
-    path.resolve(process.cwd(), "dist", "public"),
-    path.resolve(import.meta.dirname, "..", "dist", "public")
-  ];
+  // Самый надёжный путь для Vercel
+  const distPath = path.resolve(process.cwd(), "dist/public");
 
-  let distPath = possiblePaths[0];
-
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      distPath = p;
-      break;
-    }
-  }
-
-  console.log(`[Production] Trying to serve from: ${distPath}`);
-  console.log(`Current directory: ${process.cwd()}`);
+  console.log(`[Production] Serving static files from: ${distPath}`);
+  console.log(`Current working directory: ${process.cwd()}`);
 
   if (!fs.existsSync(distPath)) {
-    console.error("❌ dist/public not found!");
-    throw new Error(`Build folder not found: ${distPath}`);
+    console.error("❌ dist/public folder NOT FOUND!");
+    // Показываем, что есть в папке
+    try {
+      console.error("Files in cwd:", fs.readdirSync(process.cwd()));
+    } catch (_) {}
+    throw new Error(`Build directory not found: ${distPath}`);
   }
 
+  // Раздаём статику
   app.use(express.static(distPath));
+
+  // SPA fallback — очень важно!
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 
-  console.log(`✅ Serving static files from ${distPath}`);
+  console.log("✅ Static files serving configured successfully");
 }

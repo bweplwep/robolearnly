@@ -69,4 +69,4 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })(); // <-- убедитесь, что есть эти закрывающие скобки
-export { app };   // ← добавь эту строку в самом конце
+export default app;

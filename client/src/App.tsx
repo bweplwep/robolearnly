@@ -1,21 +1,21 @@
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import Landing from "@/pages/landing";
-import Game from "@/pages/game";
-import NotFound from "@/pages/not-found";
-import Disciplines from "@/pages/disciplines";      // ← disciplines (маленькая d)
+import Disciplines from "@/pages/disciplines";
 import MathTasks from "@/pages/MathTasks";
 import PhysicsTasks from "@/pages/PhysicsTasks";
-import Profile from "@/pages/profile";              // ← profile (маленькая p)
+import Game from "@/pages/game";
+import Profile from "@/pages/profile";
+import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Landing} />
+      <Route path="/" component={Landing} />           {/* ← Главная */}
       <Route path="/disciplines" component={Disciplines} />
       <Route path="/math-tasks" component={MathTasks} />
       <Route path="/physics-tasks" component={PhysicsTasks} />

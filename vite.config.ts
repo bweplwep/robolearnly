@@ -5,19 +5,18 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
 
-  // Убираем Replit-плагины для Vercel (они не нужны)
-  // root: path.resolve(import.meta.dirname, "client"), // ← временно закомментируем
-
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client/src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      "@": path.resolve(__dirname, "client/src"),
+      "@shared": path.resolve(__dirname, "shared"),
+      "@assets": path.resolve(__dirname, "attached_assets"),
     },
   },
 
+  root: path.resolve(__dirname, "client"),
+
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
   },
 });

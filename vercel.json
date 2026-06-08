@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run dev",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/landing.tsx" }
+    { "source": "/(.*)", "destination": "/index.js" }
   ]
 }

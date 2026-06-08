@@ -3,13 +3,15 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Все импорты через @/ — единый стиль
 import Landing from "@/pages/landing";
 import Game from "@/pages/game";
 import NotFound from "@/pages/not-found";
-import Disciplines from "@/pages/Disciplines";     // ← Исправлено
-import MathTasks from "./pages/MathTasks";
-import PhysicsTasks from "./pages/PhysicsTasks";
-import Profile from "./pages/Profile";
+import Disciplines from "@/pages/Disciplines";
+import MathTasks from "@/pages/MathTasks";
+import PhysicsTasks from "@/pages/PhysicsTasks";
+import Profile from "@/pages/Profile";
 
 function Router() {
   return (

@@ -1,4 +1,4 @@
 // api/index.ts
-import app from "../server/index.js";   // обратите внимание на .js в конце
+import app from "../client/src/pages/landing.tsx";
 
-export default app;     
+export default app;

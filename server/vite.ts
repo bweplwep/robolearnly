@@ -66,22 +66,19 @@ export async function setupVite(app: Express, server: Server) {
   });
 }
 
+// ←←← ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ VERCEL
 export function serveStatic(app: Express) {
-  // ← ИСПРАВЛЕНО ДЛЯ VERCEL
   const distPath = path.resolve(import.meta.dirname, "dist", "public");
 
-  console.log(`[Production] Serving static files from: ${distPath}`);
+  console.log(`[Production] Serving from: ${distPath}`);
 
   if (!fs.existsSync(distPath)) {
-    console.error(`❌ Build directory not found: ${distPath}`);
-    throw new Error(
-      `Could not find the build directory: ${distPath}. Make sure to run "npm run build" before deploying.`
-    );
+    console.error(`❌ Build folder not found: ${distPath}`);
+    throw new Error(`Could not find dist/public. Run "npm run build" first.`);
   }
 
   app.use(express.static(distPath));
 
-  // SPA fallback — критично для React Router / Wouter
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });

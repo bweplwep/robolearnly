@@ -15,49 +15,27 @@ export function log(message: string, source = "express") {
     second: "2-digit",
     hour12: true,
   });
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
 export async function setupVite(app: Express, server: Server) {
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true as const,
-  };
-
+  // dev mode only
+  const serverOptions = { middlewareMode: true, hmr: { server }, allowedHosts: true as const };
   const vite = await createViteServer({
     ...viteConfig,
     configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
-      },
-    },
+    customLogger: { ...viteLogger, error: (msg) => { viteLogger.error(msg); process.exit(1); } },
     server: serverOptions,
     appType: "custom",
   });
 
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-
     try {
-      const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
-        "client",
-        "index.html",
-      );
-
+      const clientTemplate = path.resolve(import.meta.dirname, "..", "client", "index.html");
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`,
-      );
-      const page = await vite.transformIndexHtml(url, template);
+      template = template.replace(`src="/src/main.tsx"`, `src="/src/main.tsx?v=${nanoid()}"`);
+      const page = await vite.transformIndexHtml(req.originalUrl, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
@@ -66,20 +44,35 @@ export async function setupVite(app: Express, server: Server) {
   });
 }
 
-// ←←← ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ VERCEL
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "dist", "public");
+  // Несколько вариантов путей — один из них сработает
+  const possiblePaths = [
+    path.resolve(import.meta.dirname, "dist", "public"),
+    path.resolve(process.cwd(), "dist", "public"),
+    path.resolve(import.meta.dirname, "..", "dist", "public")
+  ];
 
-  console.log(`[Production] Serving from: ${distPath}`);
+  let distPath = possiblePaths[0];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      distPath = p;
+      break;
+    }
+  }
+
+  console.log(`[Production] Trying to serve from: ${distPath}`);
+  console.log(`Current directory: ${process.cwd()}`);
 
   if (!fs.existsSync(distPath)) {
-    console.error(`❌ Build folder not found: ${distPath}`);
-    throw new Error(`Could not find dist/public. Run "npm run build" first.`);
+    console.error("❌ dist/public not found!");
+    throw new Error(`Build folder not found: ${distPath}`);
   }
 
   app.use(express.static(distPath));
-
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
+
+  console.log(`✅ Serving static files from ${distPath}`);
 }
